@@ -1,0 +1,108 @@
+/* ================================================================
+   Character Graph Styles — React Flow 人物关系图
+   Dark theme, consistent with NovelOS design system
+   ================================================================ */
+
+#view-character-graph {
+  padding-top: 44px;
+  box-sizing: border-box;
+}
+
+.cg-layout {
+  display: flex;
+  height: 100%;
+  position: relative;
+}
+
+/* ── 图容器 ── */
+.cg-graph-wrap {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  background: #0b0a12;
+}
+
+/* ── 工具栏（右上角浮动） ── */
+.cg-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cg-tool-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #14131e;
+  color: #d0cec8;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: .15s;
+}
+.cg-tool-btn:hover { border-color: #d4a574; color: #d4a574; }
+
+/* ── 图例（左下角） ── */
+.cg-legend {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 10;
+  background: #14131eee;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #8a8798;
+  display: flex;
+  gap: 12px;
+}
+.cg-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cg-legend-line {
+  width: 16px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+/* ── 详情面板（右侧滑出） ── */
+.cg-detail-panel {
+  position: relative;
+  overflow-y: auto;
+  transition: width 0.25s ease, opacity 0.25s ease;
+}
+
+/* ── React Flow 控件深色覆盖 ── */
+.react-flow__controls button {
+  background: #1e1d30 !important;
+  border-color: #333 !important;
+  color: #d0cec8 !important;
+}
+.react-flow__controls button:hover {
+  background: #252336 !important;
+}
+.react-flow__minimap {
+  border-radius: 8px !important;
+}
+
+/* ── 空状态 ── */
+.cg-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #3a3750;
+  gap: 10px;
+}
+.cg-empty-icon { font-size: 48px; }
+.cg-empty-text { font-size: 13px; }

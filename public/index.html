@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NovelOS — AI 创作操作系统</title>
+<link rel="stylesheet" href="/skills/layout-skill/styles.css">
+<link rel="stylesheet" href="/modules/story-bible/styles.css">
+<link rel="stylesheet" href="/modules/story-map/styles.css">
+<link rel="stylesheet" href="/modules/character-manager/styles.css">
+<link rel="stylesheet" href="/modules/character-graph/styles.css">
+<link rel="stylesheet" href="/modules/character-analyzer/styles.css">
+<link rel="stylesheet" href="/modules/outline-board/styles.css">
+<link rel="stylesheet" href="/modules/future-scene/styles.css">
+<link rel="stylesheet" href="/modules/import-assistant/styles.css">
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet.Draw CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+</head>
+<body>
+
+<div id="app">
+  <div id="topbar">
+    <span class="logo">⚔️ NovelOS</span>
+    <div class="nav">
+      <button class="nav-btn active" data-tab="war" onclick="LayoutSkill.switchTab('war', this)">作战室</button>
+      <button class="nav-btn" data-tab="studio" onclick="LayoutSkill.switchTab('studio', this)">创作台</button>
+      <button class="nav-btn" data-tab="outline" onclick="LayoutSkill.switchTab('outline', this)">大纲面板</button>
+      <button class="nav-btn" data-tab="bible" onclick="LayoutSkill.switchTab('bible', this)">故事圣经</button>
+      <button class="nav-btn" data-tab="map" onclick="LayoutSkill.switchTab('map', this)">故事地图</button>
+      <button class="nav-btn" data-tab="character" onclick="LayoutSkill.switchTab('character', this)">人物</button>
+      <button class="nav-btn" data-tab="future" onclick="LayoutSkill.switchTab('future', this)">未来场景</button>
+    </div>
+    <span class="project-name">📖 世界之刃</span>
+  </div>
+
+  <!-- WAR ROOM VIEW -->
+  <div id="view-war-room" style="display:flex;flex:1;min-height:0"><p style="color:#d4a574;padding:20px">作战室加载中...</p></div>
+
+  <!-- WRITING STUDIO VIEW -->
+  <div id="view-studio" style="display:none;flex:1">
+
+  <div id="left-panel">
+    <div class="panel-header">🗺️ 故事结构</div>
+    <div class="tree" id="story-tree"></div>
+  </div>
+
+  <div id="center-panel">
+    <div class="editor-toolbar">
+      <span class="ch-title" id="ch-title">选择章节开始写作</span>
+      <span class="ch-meta" id="ch-meta"></span>
+    </div>
+    <div class="ai-actions">
+      <button class="ai-btn primary" onclick="AIActions.generateChapter()">✨ 生成本章</button>
+      <button class="ai-btn" onclick="AIActions.continueChapter()">→ 续写</button>
+      <button class="ai-btn" onclick="AIActions.rewriteChapter()">🔄 重写</button>
+      <button class="ai-btn" onclick="AIActions.polishChapter()">✏️ 润色</button>
+      <button class="ai-btn" onclick="AIActions.generateDialogue()">💬 对话</button>
+    </div>
+    <div id="editor-area">
+      <div class="empty-state" id="empty-state">
+        <span class="icon">✍️</span>
+        <p>从左侧大纲树选择章节开始写作</p>
+      </div>
+      <textarea id="editor" style="display:none" placeholder="在这里开始创作…"></textarea>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div id="right-content">
+      <div id="empty-hint">
+        <span style="font-size:36px">🤖</span>
+        <p>选择章节后<br>显示 AI 上下文面板</p>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /view-studio -->
+
+  <!-- STORY BIBLE VIEW -->
+  <div id="view-story-bible" style="display:none;flex:1;min-height:0;background:#0b0a12"><p style="color:#d4a574;padding:20px">故事圣经加载中...</p></div>
+
+  <!-- STORY MAP VIEW -->
+  <div id="view-story-map" style="display:none;flex:1;min-height:0"><p style="color:#d4a574;padding:20px">故事地图加载中...</p></div>
+
+  <!-- CHARACTER MANAGER VIEW -->
+  <div id="view-character-manager" style="display:none;flex:1;min-height:0"><p style="color:#d4a574;padding:20px">人物管理加载中...</p></div>
+
+
+  <!-- OUTLINE BOARD VIEW -->
+  <div id="view-outline-board" style="display:none;flex:1;min-height:0"><p style="color:#d4a574;padding:20px">大纲面板加载中...</p></div>
+
+  <!-- FUTURE SCENE VIEW -->
+  <div id="view-future-scene" style="display:none;flex:1;min-height:0"><p style="color:#d4a574;padding:20px">未来场景库加载中...</p></div>
+
+<div id="toast"></div>
+
+</div><!-- /app -->
+
+<!-- ============================================================ -->
+<!--  DATA LAYER (will move to knowledge-skill in next phase)     -->
+<!-- ============================================================ -->
+<script>
+	var novelData = {
+	  project: { name: "我的故事", genre: "未设定", targetWords: 100000 },
+	  volumes: []
+	};
+
+	// Chapter lookup map (populated when volumes are created via Outline)
+	var chapterMap = {};
+</script>
+
+<!-- ============================================================ -->
+<!--  LAYOUT SKILL (loaded from public/skills/layout-skill/)       -->
+<!-- ============================================================ -->
+<script src="/skills/layout-skill/story-tree.js"></script>
+<script src="/skills/layout-skill/editor.js"></script>
+<script src="/skills/layout-skill/context-panel.js"></script>
+<script src="/skills/layout-skill/index.js"></script>
+
+<!-- ============================================================ -->
+<!--  KNOWLEDGE SKILL (loaded for Story Bible)                     -->
+<!-- ============================================================ -->
+<script src="/skills/knowledge-skill/types.js"></script>
+<script src="/skills/knowledge-skill/store.js"></script>
+<script src="/skills/knowledge-skill/search.js"></script>
+<script src="/skills/knowledge-skill/index.js"></script>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- React + ReactDOM + ReactFlow -->
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/reactflow@11.11.4/dist/umd/index.js"></script>
+<!-- Leaflet.Draw JS -->
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+<!-- ============================================================ -->
+<!--  STORY MAP MODULE                                             -->
+<!-- ============================================================ -->
+<script src="/modules/story-map/components/MapCore.js"></script>
+<script src="/modules/story-map/components/GeoLayer.js"></script>
+<script src="/modules/story-map/components/StylePanel.js"></script>
+<script src="/modules/story-map/components/TextGenerator.js"></script>
+<script src="/modules/story-map/components/ImageGenerator.js"></script>
+<script src="/modules/story-map/components/DrawControl.js"></script>
+<script src="/modules/story-map/index.js"></script>
+
+<!-- ============================================================ -->
+<!--  CHARACTER MANAGER MODULE                                      -->
+<!-- ============================================================ -->
+<script src="/modules/character-manager/components/CharSearch.js"></script>
+<script src="/modules/character-manager/components/CharList.js"></script>
+<script src="/modules/character-manager/components/CharRelationList.js"></script>
+<script src="/modules/character-manager/components/CharDetail.js"></script>
+<script src="/modules/character-manager/components/CharEditor.js"></script>
+<script src="/modules/character-analyzer/components/AnalyzerService.js"></script>
+<script src="/modules/character-analyzer/components/AnalyzerForm.js"></script>
+<script src="/modules/character-analyzer/components/AnalyzerReport.js"></script>
+<script src="/modules/character-manager/index.js"></script>
+
+<!-- ============================================================ -->
+<!--  CHARACTER GRAPH MODULE (React Flow)                            -->
+<!-- ============================================================ -->
+<script src="/modules/character-graph/components/GraphCore.js"></script>
+<script src="/modules/character-graph/index.js"></script>
+
+<!-- ============================================================ -->
+<!--  OUTLINE BOARD MODULE                                          -->
+<!-- ============================================================ -->
+<script src="/modules/outline-board/components/BoardService.js"></script>
+<script src="/modules/outline-board/components/TreeView.js"></script>
+<script src="/modules/outline-board/components/KanbanView.js"></script>
+<script src="/modules/outline-board/components/TimelineView.js"></script>
+<script src="/modules/outline-board/components/QuickCreate.js"></script>
+<script src="/modules/outline-board/index.js"></script>
+
+<!-- ============================================================ -->
+<!--  WAR ROOM MODULE (Dashboard)                                   -->
+<!-- ============================================================ -->
+<script src="/modules/war-room/index.js"></script>
+
+<!-- ============================================================ -->
+<!--  IMPORT ASSISTANT MODULE                                       -->
+<!-- ============================================================ -->
+<script src="/modules/import-assistant/index.js"></script>
+
+<!-- ============================================================ -->
+<!--  FUTURE SCENE MODULE                                          -->
+<!-- ============================================================ -->
+<script src="/modules/future-scene/components/FutureSceneService.js"></script>
+<script src="/modules/future-scene/components/FutureSceneFilter.js"></script>
+<script src="/modules/future-scene/components/FutureSceneBoard.js"></script>
+<script src="/modules/future-scene/components/FutureSceneInbox.js"></script>
+<script src="/modules/future-scene/components/FutureSceneTimeline.js"></script>
+<script src="/modules/future-scene/components/FutureSceneEditor.js"></script>
+<script src="/modules/future-scene/index.js"></script>
+
+<!-- ============================================================ -->
+<!--  STORY BIBLE MODULE                                           -->
+<!-- ============================================================ -->
+<script>
+var StoryBibleTemplates = {};
+</script>
+<script src="/modules/story-bible/templates/character-form.js"></script>
+<script src="/modules/story-bible/templates/faction-form.js"></script>
+<script src="/modules/story-bible/templates/location-form.js"></script>
+<script src="/modules/story-bible/templates/artifact-form.js"></script>
+<script src="/modules/story-bible/templates/technique-form.js"></script>
+<script src="/modules/story-bible/templates/rule-form.js"></script>
+<script src="/modules/story-bible/templates/history-form.js"></script>
+<script src="/modules/story-bible/templates/timeline-form.js"></script>
+<script src="/modules/story-bible/components/ItemCard.js"></script>
+<script src="/modules/story-bible/components/TypeNav.js"></script>
+<script src="/modules/story-bible/components/SearchBar.js"></script>
+<script src="/modules/story-bible/components/ItemList.js"></script>
+<script src="/modules/story-bible/components/ItemDetail.js"></script>
+<script src="/modules/story-bible/components/ItemEditor.js"></script>
+<script src="/modules/story-bible/components/TagCloud.js"></script>
+<script src="/modules/story-bible/components/QuickActions.js"></script>
+<script src="/modules/story-bible/components/DeleteConfirm.js"></script>
+<script src="/modules/story-bible/index.js"></script>
+<script>
+(function() {
+  var el = document.getElementById('view-story-bible');
+  if (!el) return;
+  if (typeof StoryBible === 'undefined') {
+    el.innerHTML = '<div style="padding:40px;color:#c06060"><h3>加载失败</h3><p>StoryBible 模块未定义。请打开浏览器 Console 查看错误。</p></div>';
+    el.style.display = 'flex';
+    return;
+  }
+  if (typeof KnowledgeSkill === 'undefined') {
+    el.innerHTML = '<div style="padding:40px;color:#c06060"><h3>加载失败</h3><p>KnowledgeSkill 未定义。知识库模块加载异常。</p></div>';
+    el.style.display = 'flex';
+    return;
+  }
+  el.innerHTML = '<p style="color:#5aab8a;padding:20px">模块就绪，正在初始化...</p>';
+})();
+</script>
+
+<!-- ============================================================ -->
+<!--  AI ACTIONS — 前端 AI 调用桥接层                                -->
+<!-- ============================================================ -->
+<script>
+var AIActions = (function () {
+
+  var editorEl = null;
+  function getEditor() {
+    if (!editorEl) editorEl = document.getElementById("editor");
+    return editorEl;
+  }
+
+  /** Core: call /api/generate SSE and stream result into editor */
+  function _streamGenerate(task, promptText) {
+    var editor = getEditor();
+    if (!editor) return;
+
+    LayoutSkill.showToast("🤖 AI 生成中…");
+    editor.disabled = true;
+
+    fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        task: task,
+        userPrompt: promptText,
+        maxTokens: 4096
+      })
+    }).then(function (response) {
+      if (!response.ok) throw new Error("HTTP " + response.status);
+
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = "";
+      var result = "";
+      var isDemo = false;
+
+      function read() {
+        reader.read().then(function (chunk) {
+          if (chunk.done) {
+            editor.disabled = false;
+            LayoutSkill.showToast(isDemo ? "✅ 演示内容已生成" : "✅ 生成完成");
+            return;
+          }
+
+          buffer += decoder.decode(chunk.value, { stream: true });
+          var lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          lines.forEach(function (line) {
+            var trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith("data: ")) return;
+            var data = trimmed.slice(6);
+            try {
+              var json = JSON.parse(data);
+              if (json.token) {
+                result += json.token;
+                editor.value = result;
+                editor.scrollTop = editor.scrollHeight;
+              }
+              if (json.status === "demo") {
+                isDemo = true;
+                LayoutSkill.showToast("📝 演示模式（需配置 API Key）");
+              }
+              if (json.done) return;
+              if (json.error) {
+                editor.disabled = false;
+                LayoutSkill.showToast("❌ " + json.error);
+                return;
+              }
+            } catch (e) {}
+          });
+
+          read();
+        }).catch(function (err) {
+          editor.disabled = false;
+          LayoutSkill.showToast("❌ " + err.message);
+        });
+      }
+
+      read();
+    }).catch(function (err) {
+      editor.disabled = false;
+      LayoutSkill.showToast("❌ 请求失败: " + err.message);
+    });
+  }
+
+  return {
+    generateChapter: function () {
+      var editor = getEditor();
+      var chTitle = document.getElementById("ch-title");
+      var promptText = "请根据以下大纲生成一章完整内容：\n" + (chTitle ? chTitle.textContent : "新章节");
+      _streamGenerate("chapter_generate", promptText);
+    },
+
+    continueChapter: function () {
+      var editor = getEditor();
+      var currentText = editor ? (editor.value || "").slice(-500) : "";
+      if (!currentText.trim()) {
+        LayoutSkill.showToast("请先选择章节或输入一些内容");
+        return;
+      }
+      var promptText = "请续写以下内容，保持风格一致：\n\n" + currentText;
+      _streamGenerate("chapter_continue", promptText);
+    },
+
+    rewriteChapter: function () {
+      var editor = getEditor();
+      var selectedText = "";
+      if (editor && editor.selectionStart !== undefined) {
+        selectedText = editor.value.substring(editor.selectionStart, editor.selectionEnd);
+      }
+      if (!selectedText.trim()) {
+        LayoutSkill.showToast("请先选中要重写的文本段落");
+        return;
+      }
+      var promptText = "请重写以下内容，保持核心情节不变，优化表达：\n\n" + selectedText;
+      _streamGenerate("chapter_rewrite", promptText);
+    },
+
+    polishChapter: function () {
+      var editor = getEditor();
+      var selectedText = "";
+      if (editor && editor.selectionStart !== undefined) {
+        selectedText = editor.value.substring(editor.selectionStart, editor.selectionEnd);
+      }
+      if (!selectedText.trim()) {
+        LayoutSkill.showToast("请先选中要润色的文本段落");
+        return;
+      }
+      var promptText = "请润色以下内容，修正语病，增强画面感：\n\n" + selectedText;
+      _streamGenerate("chapter_polish", promptText);
+    },
+
+    generateDialogue: function () {
+      var editor = getEditor();
+      var contextText = editor ? (editor.value || "").slice(-1000) : "";
+      var promptText = "根据以下场景，生成一段生动的角色对话：\n\n" + (contextText || "请先生成章节内容作为上下文");
+      _streamGenerate("dialogue_generate", promptText);
+    }
+  };
+})();
+</script>
+<script>
+LayoutSkill.init(novelData, chapterMap);
+try {
+  StoryBible.init("view-story-bible", "proj_demo", "世界之刃", "奇幻武侠");
+} catch(e) {
+  var el = document.getElementById('view-story-bible');
+  if (el) {
+    el.innerHTML = '<div style="padding:40px;color:#c06060"><h3>初始化异常</h3><pre>' + e.message + '</pre></div>';
+    el.style.display = 'flex';
+  }
+}
+try {
+  StoryMap.init("view-story-map", "proj_demo");
+} catch(e) {
+  var mel = document.getElementById('view-story-map');
+  if (mel) {
+    mel.innerHTML = '<div style="padding:40px;color:#c06060"><h3>故事地图初始化异常</h3><pre>' + e.message + '</pre></div>';
+    mel.style.display = 'flex';
+  }
+}
+try {
+  CharacterManager.init("view-character-manager", "proj_demo");
+} catch(e) {
+  var cel = document.getElementById('view-character-manager');
+  if (cel) {
+    cel.innerHTML = '<div style="padding:40px;color:#c06060"><h3>人物管理初始化异常</h3><pre>' + e.message + '</pre></div>';
+    cel.style.display = 'flex';
+  }
+}
+try {
+  OutlineBoard.init("view-outline-board", "proj_demo");
+} catch(e) {
+  var oel = document.getElementById('view-outline-board');
+  if (oel) {
+    oel.innerHTML = '<div style="padding:40px;color:#c06060"><h3>大纲面板初始化异常</h3><pre>' + e.message + '</pre></div>';
+    oel.style.display = 'flex';
+  }
+}
+try {
+  WarRoom.init("view-war-room", "proj_demo");
+} catch(e) {
+  var wrel = document.getElementById('view-war-room');
+  if (wrel) {
+    wrel.innerHTML = '<div style="padding:40px;color:#c06060"><h3>作战室初始化异常</h3><pre>' + e.message + '</pre></div>';
+    wrel.style.display = 'flex';
+  }
+}
+try {
+  FutureScene.init("view-future-scene", "proj_demo");
+} catch(e) {
+  var fsel = document.getElementById('view-future-scene');
+  if (fsel) {
+    fsel.innerHTML = '<div style="padding:40px;color:#c06060"><h3>未来场景库初始化异常</h3><pre>' + e.message + '</pre></div>';
+    fsel.style.display = 'flex';
+  }
+}
+</script>
+
+</body>
+</html>

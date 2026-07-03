@@ -1,0 +1,265 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ========== 项目 ==========
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  genre       String
+  description String?
+  targetWords Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  characters     Character[]
+  relationships  CharacterRelationship[]
+  factions       Faction[]
+  locations      Location[]
+  ruleSystems    RuleSystem[]
+  historyEvents  HistoryEvent[]
+  volumes        Volume[]
+  chapters       Chapter[]
+  scenes         Scene[]
+  futureScenes   FutureScene[]
+  references     Reference[]
+  generationLogs AIGenerationLog[]
+  unifiedItems   UnifiedItem[]
+}
+
+// ========== Story Bible: 人物 ==========
+model Character {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  alias       String?
+  role        String
+  factionId   String?
+  faction     Faction? @relation(fields: [factionId], references: [id])
+  personality String
+  appearance  String?
+  background  String?
+  arc         String?
+  abilities   String?
+  notes       String?
+  tags        String?
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  relationshipsAsA CharacterRelationship[] @relation("CharA")
+  relationshipsAsB CharacterRelationship[] @relation("CharB")
+
+  @@unique([projectId, name])
+}
+
+// ========== Story Bible: 人物关系 ==========
+model CharacterRelationship {
+  id            String    @id @default(cuid())
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  characterAId  String
+  characterA    Character @relation("CharA", fields: [characterAId], references: [id], onDelete: Cascade)
+  characterBId  String
+  characterB    Character @relation("CharB", fields: [characterBId], references: [id], onDelete: Cascade)
+  relationType  String
+  description   String?
+  createdAt     DateTime @default(now())
+}
+
+// ========== Story Bible: 势力 ==========
+model Faction {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  type        String
+  description String?
+  influence   Int      @default(0)
+  military    Int      @default(0)
+  economy     Int      @default(0)
+  resources   String?
+  notes       String?
+  tags        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     Character[]
+
+  @@unique([projectId, name])
+}
+
+// ========== Story Bible: 地点 ==========
+model Location {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  type        String
+  parentId    String?
+  parent      Location? @relation("LocationHierarchy", fields: [parentId], references: [id])
+  children    Location[] @relation("LocationHierarchy")
+  description String?
+  climate     String?
+  resources   String?
+  notes       String?
+  tags        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ========== Story Bible: 规则体系 ==========
+model RuleSystem {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category    String
+  title       String
+  content     String
+  tags        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ========== Story Bible: 历史事件 ==========
+model HistoryEvent {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  summary     String
+  era         String?
+  characters  String?
+  factions    String?
+  isAuto      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ========== Story Map: 卷 ==========
+model Volume {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  summary   String?
+  order     Int
+  status    String   @default("draft")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chapters  Chapter[]
+}
+
+// ========== Story Map: 章 ==========
+model Chapter {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  volumeId  String?
+  volume    Volume?  @relation(fields: [volumeId], references: [id])
+  title     String
+  summary   String?
+  content   String?
+  wordCount Int      @default(0)
+  order     Int
+  status    String   @default("draft")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scenes              Scene[]
+  futureSceneTriggers FutureScene[] @relation("FutureSceneTriggers")
+}
+
+// ========== Story Map: 场景/情节点 ==========
+model Scene {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chapterId String?
+  chapter   Chapter? @relation(fields: [chapterId], references: [id])
+  title     String
+  summary   String?
+  order     Int
+  status    String   @default("draft")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ========== Future Scene: 未来场景库 ==========
+model FutureScene {
+  id                 String   @id @default(cuid())
+  projectId          String
+  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title              String
+  summary            String?
+  emotionGoal        String?
+  sceneType          String?
+  importance         String   @default("medium")
+  status             String   @default("构思中")
+  triggerConditions  String?
+  prerequisiteEvents String?
+  targetCharacters   String?
+  targetLocations    String?
+  targetFactions     String?
+  expectedChapterId  String?
+  expectedChapter    Chapter? @relation("FutureSceneTriggers", fields: [expectedChapterId], references: [id])
+  notes              String?
+  tags               String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// ========== 参考资料库 ==========
+model Reference {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  category  String   @default("其他")
+  tags      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ========== 统一知识条目（灵活存储，替代逐个类型建表） ==========
+model UnifiedItem {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type        String   // character / faction / location / artifact / technique / rule / history_event / timeline_node / nation / sect
+  name        String
+  aliases     String   @default("")   // comma-separated
+  summary     String   @default("")
+  description String   @default("")
+  tags        String   @default("")   // comma-separated
+  attrsJson   String   @default("{}") // JSON blob for type-specific fields
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId, type])
+  @@index([projectId])
+}
+
+// ========== AI 生成日志 ==========
+model AIGenerationLog {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      String
+  provider  String
+  model     String
+  prompt    String
+  result    String
+  accepted  Boolean  @default(false)
+  tokenUsed Int
+  targetType String?
+  targetId  String?
+  createdAt DateTime @default(now())
+}

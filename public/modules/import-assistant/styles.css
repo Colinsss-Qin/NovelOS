@@ -1,0 +1,527 @@
+/* ================================================================
+   Import Assistant Module — ia-* prefix
+   Dark theme: matches NovelOS design system
+   ================================================================ */
+
+/* ── Modal Overlay ── */
+#ia-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: ia-fade-in 0.2s ease;
+}
+
+@keyframes ia-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Modal Container ── */
+#ia-modal {
+  width: 800px;
+  max-width: 95vw;
+  max-height: 90vh;
+  background: #14131e;
+  border: 1px solid #252336;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Modal Header ── */
+#ia-modal-header {
+  display: flex;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #252336;
+  flex-shrink: 0;
+}
+
+.ia-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #d4a574;
+  flex: 1;
+}
+
+.ia-modal-close {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #252336;
+  border-radius: 8px;
+  background: transparent;
+  color: #6b6880;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.ia-modal-close:hover {
+  border-color: #c06060;
+  color: #c06060;
+}
+
+/* ── Modal Body ── */
+#ia-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Modal Footer ── */
+#ia-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #252336;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+/* ── Dropzone ── */
+
+.ia-dropzone {
+  border: 2px dashed #252336;
+  border-radius: 12px;
+  padding: 60px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #1e1d30;
+}
+
+.ia-dropzone:hover,
+.ia-dropzone-hover {
+  border-color: #d4a574;
+  background: #201f35;
+}
+
+.ia-dropzone-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.ia-dropzone-text {
+  font-size: 14px;
+  color: #d0cec8;
+  margin-bottom: 4px;
+}
+
+.ia-dropzone-hint {
+  font-size: 12px;
+  color: #6b6880;
+}
+
+/* ── File Info ── */
+
+.ia-file-info {
+  margin-top: 16px;
+  padding: 16px;
+  background: #1e1d30;
+  border: 1px solid #252336;
+  border-radius: 8px;
+}
+
+.ia-file-info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ia-file-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #d0cec8;
+  flex: 1;
+}
+
+.ia-file-size {
+  font-size: 12px;
+  color: #6b6880;
+}
+
+/* ── Center content (loading, empty) ── */
+.ia-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.ia-hint {
+  font-size: 12px;
+  color: #6b6880;
+  margin-top: 4px;
+}
+
+/* ── Spinner ── */
+
+.ia-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #252336;
+  border-top-color: #d4a574;
+  border-radius: 50%;
+  animation: ia-spin 0.8s linear infinite;
+}
+
+@keyframes ia-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ia-status-text {
+  font-size: 15px;
+  color: #d0cec8;
+}
+
+/* ── Summary Bar ── */
+
+.ia-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 16px;
+  background: #1e1d30;
+  border: 1px solid #252336;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: #8a8798;
+  flex-shrink: 0;
+}
+
+.ia-summary-bar strong {
+  color: #d4a574;
+}
+
+.ia-summary-bar .ia-select-all {
+  margin-left: auto;
+  font-size: 12px;
+  color: #6b9aed;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ia-summary-bar .ia-select-all:hover {
+  color: #8abaff;
+}
+
+/* ── Category Sections ── */
+
+.ia-category-section {
+  margin-bottom: 20px;
+}
+
+.ia-category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #14131e;
+  border-left: 3px solid #6b9aed;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.ia-category-icon {
+  font-size: 16px;
+}
+
+.ia-category-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #d0cec8;
+  flex: 1;
+}
+
+.ia-category-count {
+  font-size: 12px;
+  color: #6b6880;
+  background: #252336;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* ── Suggestion Cards ── */
+
+.ia-suggestion-card {
+  padding: 12px 16px;
+  margin-bottom: 6px;
+  background: #1e1d30;
+  border: 1px solid #252336;
+  border-radius: 8px;
+  transition: border-color 0.15s;
+}
+
+.ia-suggestion-card:hover {
+  border-color: #3a3850;
+}
+
+.ia-suggestion-card.ia-unchecked {
+  opacity: 0.5;
+}
+
+.ia-suggestion-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.ia-suggestion-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #d4a574;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ia-suggestion-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #d0cec8;
+}
+
+.ia-suggestion-summary {
+  font-size: 12px;
+  color: #8a8798;
+  margin-top: 4px;
+  margin-left: 28px;
+}
+
+.ia-suggestion-desc {
+  font-size: 12px;
+  color: #6b6880;
+  margin-top: 6px;
+  margin-left: 28px;
+  line-height: 1.6;
+  padding: 8px 10px;
+  background: #14131e;
+  border-radius: 4px;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.ia-suggestion-tags {
+  margin-top: 6px;
+  margin-left: 28px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.ia-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #252336;
+  color: #8a8798;
+}
+
+/* ── Actions (footer buttons) ── */
+
+.ia-hidden {
+  display: none !important;
+}
+
+/* ── Buttons ── */
+
+.ia-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid #252336;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: transparent;
+  color: #8a8798;
+}
+
+.ia-btn:hover {
+  border-color: #d4a574;
+  color: #d4a574;
+}
+
+.ia-btn-primary {
+  background: #d4a574;
+  color: #0b0a12;
+  border-color: #d4a574;
+}
+
+.ia-btn-primary:hover {
+  background: #c09468;
+  color: #0b0a12;
+}
+
+.ia-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Done Banner ── */
+
+.ia-done-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.ia-done-banner-success {
+  background: #1a2e24;
+  border: 1px solid #5aab8a;
+}
+
+.ia-done-banner-warn {
+  background: #2e241a;
+  border: 1px solid #d4a574;
+}
+
+.ia-done-icon {
+  font-size: 32px;
+}
+
+.ia-done-text {
+  font-size: 15px;
+  color: #d0cec8;
+}
+
+.ia-done-detail {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 0;
+}
+
+.ia-done-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #1e1d30;
+  border: 1px solid #252336;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.ia-done-item-icon {
+  font-size: 14px;
+}
+
+.ia-done-item-name {
+  color: #d0cec8;
+  flex: 1;
+}
+
+.ia-done-item-target {
+  font-size: 11px;
+  color: #6b6880;
+}
+
+.ia-done-item-badge {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  background: #252336;
+  color: #6b6880;
+}
+
+.ia-done-errors {
+  margin-top: 16px;
+}
+
+.ia-done-errors-title {
+  font-size: 13px;
+  color: #c06060;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.ia-done-error-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #1e1d30;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #8a8798;
+}
+
+/* ── Empty state ── */
+.ia-empty {
+  text-align: center;
+  padding: 40px;
+  color: #6b6880;
+  font-size: 14px;
+}
+
+/* ── V2: Source Excerpt (引用块) ── */
+
+.ia-source-excerpt {
+  margin: 8px 0 4px 28px;
+  padding: 8px 12px;
+  background: #1a1928;
+  border-left: 3px solid #d4a574;
+  border-radius: 0 6px 6px 0;
+  font-size: 12px;
+  color: #8a8798;
+  font-style: italic;
+  line-height: 1.6;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+/* ── V2: Confidence 标识 ── */
+
+.ia-confidence {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #252336;
+  color: #d4a574;
+  margin-left: 8px;
+  font-weight: 600;
+}
+
+/* ── V2: Conflict 冲突 ── */
+
+.ia-suggestion-card.ia-conflict {
+  border-color: #d4a574;
+  background: #1e1a18;
+}
+
+.ia-conflict-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #d4a574;
+  color: #0b0a12;
+  margin-right: 6px;
+  font-weight: 600;
+}
+
+/* ── V2: Extra payload area ── */
+
+.ia-suggestion-extra {
+  margin-left: 28px;
+  margin-top: 4px;
+}

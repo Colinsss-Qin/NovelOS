@@ -1,0 +1,193 @@
+/* ================================================================
+   Outline Board Styles — 大纲面板
+   Dark theme, NovelOS design system
+   ================================================================ */
+
+#view-outline-board { box-sizing: border-box; }
+
+.ob-layout { display: flex; flex-direction: column; height: 100%; }
+
+/* ── 顶部工具栏 ── */
+.ob-topbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; background: #14131e; border-bottom: 1px solid #252336;
+  flex-shrink: 0;
+}
+.ob-view-tabs { display: flex; gap: 2px; margin-right: auto; }
+.ob-view-tab {
+  padding: 6px 14px; border-radius: 6px; border: 1px solid transparent;
+  background: transparent; color: #8a8798; font-size: 12px; cursor: pointer; transition: .15s;
+}
+.ob-view-tab:hover { color: #d0cec8; background: #1e1d30; }
+.ob-view-tab.active { color: #d4a574; background: #252336; border-color: #d4a57444; }
+
+.ob-quick-create {
+  padding: 6px 16px; border-radius: 6px; border: none;
+  background: #d4a574; color: #0b0a12; font-size: 12px; font-weight: 600; cursor: pointer; transition: .15s;
+}
+.ob-quick-create:hover { background: #c09468; }
+
+.ob-story-select {
+  padding: 5px 8px; border-radius: 4px; border: 1px solid #333;
+  background: #1e1d30; color: #d0cec8; font-size: 11px; outline: none;
+}
+
+/* ── 主内容区 ── */
+.ob-content { flex: 1; overflow: auto; min-height: 0; }
+
+/* ═══════════════════════════════
+   TREE VIEW
+   ═══════════════════════════════ */
+
+.ob-tree { padding: 12px 16px; min-height: 100%; }
+.ob-tree-node { margin-bottom: 2px; }
+.ob-tree-header {
+  display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+  border-radius: 4px; cursor: pointer; transition: .15s; user-select: none;
+}
+.ob-tree-header:hover { background: #1e1d30; }
+.ob-tree-header.dragover { background: #d4a57422; border: 1px dashed #d4a574; }
+.ob-tree-toggle { font-size: 9px; color: #6b6880; width: 12px; text-align: center; display: inline-block; transition: .15s; }
+.ob-tree-toggle.open { transform: rotate(90deg); }
+.ob-tree-icon { font-size: 14px; }
+.ob-tree-name { font-size: 12px; color: #c4c0d0; flex: 1; }
+.ob-tree-name.volume { font-weight: 600; color: #d0cec8; font-size: 13px; }
+.ob-tree-name.chapter { font-weight: 500; }
+.ob-tree-meta { font-size: 10px; color: #6b6880; }
+.ob-tree-status {
+  padding: 1px 8px; border-radius: 8px; font-size: 9px;
+}
+.ob-tree-status.未开始 { background: #6b688033; color: #6b6880; }
+.ob-tree-status.写作中 { background: #d4a57433; color: #d4a574; }
+.ob-tree-status.完成 { background: #5aab8a33; color: #5aab8a; }
+
+.ob-tree-children { padding-left: 22px; display: none; }
+.ob-tree-children.open { display: block; }
+
+.ob-tree-actions { display: none; gap: 3px; margin-left: auto; }
+.ob-tree-header:hover .ob-tree-actions { display: flex; }
+.ob-tree-act-btn {
+  background: none; border: none; color: #555; font-size: 12px; cursor: pointer; padding: 2px 4px;
+}
+.ob-tree-act-btn:hover { color: #d4a574; }
+
+.ob-tree-empty { padding: 30px; text-align: center; color: #555; font-size: 12px; }
+
+/* ═══════════════════════════════
+   KANBAN VIEW
+   ═══════════════════════════════ */
+
+.ob-kanban { display: flex; gap: 12px; padding: 14px; height: 100%; overflow-x: auto; }
+.ob-kanban-col {
+  flex: 1; min-width: 260px; max-width: 380px;
+  background: #14131e; border: 1px solid #252336; border-radius: 8px;
+  display: flex; flex-direction: column;
+}
+.ob-kanban-col-header {
+  padding: 10px 14px; border-bottom: 1px solid #252336;
+  font-size: 12px; font-weight: 600; color: #8a8798;
+  display: flex; align-items: center; gap: 6px;
+}
+.ob-kanban-count {
+  padding: 1px 8px; border-radius: 10px; background: #252336;
+  font-size: 10px; color: #6b6880;
+}
+.ob-kanban-list {
+  flex: 1; overflow-y: auto; padding: 8px;
+  min-height: 60px;
+}
+.ob-kanban-list.dragover { background: #d4a57410; }
+.ob-kanban-card {
+  padding: 10px 12px; margin-bottom: 6px;
+  border-radius: 6px; background: #1e1d30; border: 1px solid #252336;
+  cursor: grab; transition: .15s;
+}
+.ob-kanban-card:hover { border-color: #444; }
+.ob-kanban-card:active { cursor: grabbing; opacity: .8; }
+.ob-kanban-card-title { font-size: 12px; color: #d0cec8; font-weight: 500; margin-bottom: 4px; }
+.ob-kanban-card-meta { font-size: 10px; color: #6b6880; display: flex; gap: 8px; }
+.ob-kanban-card-scenes { font-size: 10px; color: #d4a574; margin-top: 3px; }
+
+/* ═══════════════════════════════
+   TIMELINE VIEW
+   ═══════════════════════════════ */
+
+.ob-timeline { padding: 20px 30px; position: relative; }
+.ob-timeline-line {
+  position: absolute; left: 44px; top: 0; bottom: 0;
+  width: 2px; background: #252336;
+}
+.ob-timeline-item {
+  position: relative; padding-left: 50px; margin-bottom: 20px;
+}
+.ob-timeline-dot {
+  position: absolute; left: 38px; top: 4px;
+  width: 14px; height: 14px; border-radius: 50%; border: 2px solid #d4a574;
+  background: #0b0a12;
+}
+.ob-timeline-dot.scene { width: 10px; height: 10px; left: 40px; border-color: #6b9aed; }
+.ob-timeline-vol {
+  font-size: 10px; color: #6b6880; text-transform: uppercase; letter-spacing: 1px;
+}
+.ob-timeline-title {
+  font-size: 14px; font-weight: 600; color: #d0cec8; margin-top: 2px;
+}
+.ob-timeline-summary { font-size: 11px; color: #6b6880; margin-top: 3px; }
+.ob-timeline-scenes { margin-top: 6px; }
+.ob-timeline-scene {
+  padding: 4px 10px; border-radius: 4px; background: #14131e;
+  font-size: 11px; color: #8a8798; margin-bottom: 3px;
+}
+
+/* ═══════════════════════════════
+   QUICK CREATE MODAL
+   ═══════════════════════════════ */
+
+.ob-modal-overlay {
+  position: fixed; inset: 0; z-index: 1000; background: #00000088;
+  display: flex; align-items: center; justify-content: center;
+}
+.ob-modal {
+  background: #1e1d30; border: 1px solid #333; border-radius: 12px;
+  padding: 20px; min-width: 380px; max-width: 480px;
+}
+.ob-modal h3 { font-size: 15px; color: #d0cec8; margin-bottom: 14px; }
+.ob-form-group { margin-bottom: 10px; }
+.ob-form-label { display: block; font-size: 10px; color: #6b6880; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 1px; }
+.ob-form-input {
+  width: 100%; padding: 7px 10px; border-radius: 4px; border: 1px solid #333;
+  background: #14131e; color: #d0cec8; font-size: 12px; outline: none; font-family: inherit; resize: vertical;
+}
+.ob-form-input:focus { border-color: #d4a57455; }
+textarea.ob-form-input { min-height: 60px; }
+.ob-form-row { display: flex; gap: 8px; }
+.ob-form-row > * { flex: 1; }
+.ob-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.ob-form-cancel {
+  padding: 7px 16px; border-radius: 6px; border: 1px solid #333;
+  background: transparent; color: #8a8798; font-size: 12px; cursor: pointer;
+}
+.ob-form-submit {
+  padding: 7px 16px; border-radius: 6px; border: none;
+  background: #d4a574; color: #0b0a12; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+
+/* ═══════════════════════════════
+   ENTITY PICKER
+   ═══════════════════════════════ */
+
+.ob-entity-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.ob-entity-tag {
+  padding: 2px 8px; border-radius: 3px; font-size: 10px;
+  background: #252336; color: #8a8798;
+}
+.ob-entity-add {
+  padding: 2px 8px; border-radius: 3px; border: 1px dashed #444;
+  background: transparent; color: #555; font-size: 10px; cursor: pointer;
+}
+.ob-entity-add:hover { border-color: #d4a574; color: #d4a574; }
+
+/* ── Empty ── */
+.ob-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #3a3750; gap: 10px; }
+.ob-empty-icon { font-size: 40px; }
+.ob-empty-text { font-size: 12px; }

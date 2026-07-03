@@ -1,0 +1,346 @@
+/* ================================================================
+   Story Map Styles — 2D 地图可视化
+   Layout: 四角分区 — 控件分布在地图四角，互不重叠
+   ================================================================ */
+
+.sm-layout {
+  display: flex;
+  height: 100%;
+  position: relative;
+}
+
+#view-story-map {
+  box-sizing: border-box;
+}
+
+/* ── 左侧面板（精简：图例 + 数据管理） ── */
+.sm-panel {
+  width: 220px;
+  min-width: 220px;
+  background: #14131e;
+  border-left: 1px solid #252336;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  order: 2;
+}
+
+.sm-panel-section {
+  padding: 12px;
+  border-bottom: 1px solid #252336;
+}
+.sm-panel-section h3 {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b6880;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+/* ── 地图容器 ── */
+.sm-map-wrap {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+#story-map-container {
+  width: 100%;
+  height: 100%;
+  background: #0b0a12;
+}
+
+/* ── Leaflet 深色覆盖 ── */
+#story-map-container .leaflet-control-zoom a {
+  background: #1e1d30;
+  color: #d0cec8;
+  border-color: #333;
+}
+#story-map-container .leaflet-control-zoom a:hover {
+  background: #252336;
+}
+#story-map-container .leaflet-control-attribution {
+  background: #14131ecc;
+  color: #555;
+  font-size: 9px;
+}
+
+/* ═══════════════════════════════════════
+   四角浮动控件
+   z-index 分层: 地图控件(1000) < 浮动面板(1001) < 编辑工具栏(1002)
+   ═══════════════════════════════════════ */
+
+/* ── 左上角: Leaflet zoom (default) ── */
+/* z-index: ~1000 (Leaflet built-in) */
+
+/* ── 右上角: 编辑工具栏 (垂直, z-index:1002, top:50px 避开 zoom) ── */
+.sm-edit-toolbar-wrap {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  z-index: 1002;
+}
+.sm-edit-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #14131e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 6px;
+}
+.sm-type-select {
+  width: 100%;
+  padding: 5px 6px;
+  border-radius: 4px;
+  border: 1px solid #333;
+  background: #1e1d30;
+  color: #d0cec8;
+  font-size: 11px;
+  margin-bottom: 4px;
+  outline: none;
+}
+.sm-type-select:focus { border-color: #d4a574; }
+.sm-edit-tool {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #1e1d30;
+  color: #d0cec8;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.15s;
+}
+.sm-edit-tool:hover { border-color: #d4a574; color: #d4a574; }
+.sm-edit-tool.active {
+  background: #d4a57422;
+  border-color: #d4a574;
+  color: #d4a574;
+}
+.sm-edit-tool.sm-edit-sep { margin-top: 4px; }
+
+.sm-draw-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* ── 左下角: 底图切换 (水平条, z-index:1001) ── */
+.sm-basemap-bar {
+  position: absolute;
+  bottom: 10px;
+  left: 50px;
+  z-index: 1001;
+  display: flex;
+  gap: 4px;
+  background: #14131eee;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 4px;
+}
+.sm-basemap-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #8a8798;
+  font-size: 11px;
+  cursor: pointer;
+  transition: 0.15s;
+  white-space: nowrap;
+}
+.sm-basemap-btn:hover { background: #252336; color: #d0cec8; }
+.sm-basemap-btn.active {
+  background: #252336;
+  color: #d4a574;
+  border-color: #d4a57444;
+}
+
+/* ── 右下角: AI 生成浮动按钮 (z-index:1001) ── */
+.sm-float-actions {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sm-float-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid #333;
+  background: #1e1d30;
+  color: #d0cec8;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.15s;
+  box-shadow: 0 2px 8px #00000044;
+}
+.sm-float-btn:hover {
+  border-color: #d4a574;
+  color: #d4a574;
+  transform: scale(1.05);
+}
+.sm-float-btn.active {
+  background: #d4a574;
+  color: #0b0a12;
+  border-color: #d4a574;
+}
+
+/* ── 右下角: 弹出面板 (点击浮动按钮展开) ── */
+.sm-flyout-panel {
+  position: absolute;
+  bottom: 10px;
+  right: 60px;
+  z-index: 1001;
+  width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: #14131e;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 4px 20px #00000066;
+  display: none;
+}
+.sm-flyout-panel.open { display: block; }
+.sm-flyout-panel h3 {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b6880;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+/* ═══════════════════════════════════════
+   共享控件样式（面板和弹出框共用）
+   ═══════════════════════════════════════ */
+
+.sm-text-input {
+  width: 100%;
+  min-height: 100px;
+  background: #1e1d30;
+  border: 1px solid #252336;
+  color: #d0cec8;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+}
+.sm-text-input:focus { border-color: #d4a57455; }
+.sm-text-input::placeholder { color: #4a4758; }
+
+.sm-generate-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  background: #d4a574;
+  color: #0b0a12;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.sm-generate-btn:hover { background: #c09468; }
+.sm-generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.sm-upload-area {
+  border: 2px dashed #333;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.15s;
+  color: #6b6880;
+  font-size: 12px;
+}
+.sm-upload-area:hover { border-color: #d4a57455; color: #8a8798; }
+.sm-upload-area.has-file { border-color: #5aab8a; color: #5aab8a; }
+.sm-upload-area .sm-upload-icon {
+  font-size: 24px;
+  display: block;
+  margin-bottom: 4px;
+}
+.sm-upload-preview {
+  max-width: 100%;
+  max-height: 100px;
+  margin-top: 6px;
+  border-radius: 6px;
+  display: none;
+}
+
+/* ── 图例 ── */
+.sm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sm-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #8a8798;
+}
+.sm-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── 导出/导入按钮 ── */
+.sm-export-btn {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: transparent;
+  color: #8a8798;
+  font-size: 11px;
+  cursor: pointer;
+  transition: 0.15s;
+  margin-top: 6px;
+}
+.sm-export-btn:hover { border-color: #d4a574; color: #d4a574; }
+
+/* ── 弹出框 ── */
+.sm-popup-content { font-size: 12px; color: #d0cec8; }
+.sm-popup-content strong { color: #d4a574; }
+.sm-popup-actions { margin-top: 6px; display: flex; gap: 4px; }
+.sm-popup-actions button {
+  padding: 3px 10px; border-radius: 4px; border: 1px solid #333;
+  background: #1e1d30; color: #8a8798; font-size: 11px; cursor: pointer;
+}
+.sm-popup-actions button.sm-del-btn { border-color: #5e3030; color: #c06060; }
+
+.sm-loading {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; padding: 12px; color: #d4a574; font-size: 12px;
+}
+
+/* ── Flyout close button ── */
+.sm-flyout-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #8a8798;
+  font-size: 16px;
+  cursor: pointer;
+}
+.sm-flyout-close:hover { color: #d4a574; }

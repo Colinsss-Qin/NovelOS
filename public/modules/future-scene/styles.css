@@ -1,0 +1,288 @@
+/* ================================================================
+   Future Scene Module — fs-* prefix
+   Dark theme: matches NovelOS design system
+   ================================================================ */
+
+/* ── Layout ── */
+#view-future-scene { padding-top: 0; box-sizing: border-box; }
+
+.fs-layout { display: flex; flex-direction: column; height: 100%; background: #0b0a12; }
+
+.fs-loading { padding: 60px 20px; text-align: center; color: #6b6880; font-size: 14px; }
+
+/* ── Topbar ── */
+.fs-topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px;
+  background: #14131e; border-bottom: 1px solid #252336;
+  min-height: 44px; flex-shrink: 0;
+}
+
+.fs-view-tabs { display: flex; gap: 4px; }
+
+.fs-view-tab {
+  background: transparent; border: 1px solid #252336; color: #8a8798;
+  padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer;
+  transition: all 0.15s;
+}
+.fs-view-tab:hover    { border-color: #5aab8a; color: #d0cec8; }
+.fs-view-tab.active   { background: #1e1d30; border-color: #5aab8a; color: #5aab8a; }
+
+/* ── Content ── */
+.fs-content { flex: 1; overflow: auto; min-height: 0; }
+
+/* ── Filter ── */
+.fs-filter { display: flex; gap: 8px; align-items: center; flex: 1; }
+
+.fs-filter-search {
+  background: #1e1d30; border: 1px solid #252336; color: #d0cec8;
+  padding: 6px 12px; border-radius: 6px; font-size: 13px; outline: none;
+  min-width: 180px;
+}
+.fs-filter-search:focus { border-color: #5aab8a; }
+.fs-filter-search::placeholder { color: #6b6880; }
+
+.fs-filter-select {
+  background: #1e1d30; border: 1px solid #252336; color: #d0cec8;
+  padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; outline: none;
+}
+.fs-filter-select:focus { border-color: #d4a574; }
+
+/* ── Board (Kanban) ── */
+.fs-board { display: flex; gap: 12px; padding: 16px; height: 100%; min-height: 0; overflow-x: auto; }
+
+.fs-board-col {
+  flex: 1; min-width: 220px; max-width: 320px;
+  display: flex; flex-direction: column;
+}
+
+.fs-board-col-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; margin-bottom: 8px;
+  background: #14131e; border-radius: 8px 8px 0 0;
+  font-size: 13px; font-weight: 600; color: #d0cec8;
+}
+
+.fs-board-count {
+  background: #1e1d30; color: #8a8798; font-size: 11px;
+  padding: 2px 8px; border-radius: 10px;
+}
+
+.fs-board-list {
+  flex: 1; overflow-y: auto; padding: 4px;
+  display: flex; flex-direction: column; gap: 6px;
+  min-height: 60px; border-radius: 0 0 8px 8px;
+  background: #0e0d18; transition: background 0.2s;
+}
+.fs-board-list.fs-dragover { background: #1a1930; outline: 2px dashed #5aab8a; outline-offset: -4px; }
+
+/* ── Board Card ── */
+.fs-board-card {
+  background: #1e1d30; border: 1px solid #252336; border-radius: 8px;
+  padding: 10px 12px; cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.fs-board-card:hover { border-color: #d4a574; transform: translateY(-1px); }
+
+.fs-card-title { font-size: 13px; font-weight: 600; color: #d0cec8; margin-bottom: 6px; line-height: 1.3; }
+
+.fs-card-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+
+.fs-card-type {
+  font-size: 11px; color: #8a8798; background: #14131e;
+  padding: 1px 8px; border-radius: 4px; border: 1px solid #252336;
+}
+
+.fs-card-importance { font-size: 12px; }
+.fs-imp-high   { color: #e07070; }
+.fs-imp-medium { color: #d4a574; }
+.fs-imp-low    { color: #6b6880; }
+
+.fs-card-emotion { font-size: 11px; color: #c9a66b; margin-bottom: 4px; }
+
+.fs-card-entities { display: flex; gap: 8px; font-size: 11px; color: #6b6880; }
+
+/* ── Empty State ── */
+.fs-empty { padding: 60px 20px; text-align: center; }
+.fs-empty-icon { font-size: 40px; margin-bottom: 12px; }
+.fs-empty-text { font-size: 16px; color: #8a8798; margin-bottom: 6px; }
+.fs-empty-sub  { font-size: 12px; color: #6b6880; }
+
+/* ── Inbox / List ── */
+.fs-inbox { padding: 12px 16px; overflow: auto; }
+
+.fs-inbox-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+.fs-inbox-table thead th {
+  padding: 8px 12px; text-align: left;
+  background: #14131e; color: #6b6880; font-weight: 600;
+  border-bottom: 1px solid #252336; font-size: 12px; text-transform: uppercase;
+  position: sticky; top: 0; z-index: 1;
+}
+.fs-sortable { cursor: pointer; user-select: none; }
+.fs-sortable:hover { color: #d4a574; }
+
+.fs-inbox-row { cursor: pointer; transition: background 0.1s; }
+.fs-inbox-row:hover { background: #14131e; }
+.fs-inbox-row td { padding: 8px 12px; border-bottom: 1px solid #1a1930; color: #d0cec8; }
+
+.fs-col-title { font-weight: 600; min-width: 160px; }
+.fs-col-type { min-width: 60px; }
+.fs-col-importance { min-width: 60px; text-align: center; }
+.fs-col-status { min-width: 70px; }
+.fs-col-emotion { min-width: 80px; }
+.fs-col-time { min-width: 120px; color: #6b6880; font-size: 12px; }
+
+.fs-tag {
+  font-size: 11px; color: #8a8798; background: #14131e;
+  padding: 1px 8px; border-radius: 4px; border: 1px solid #252336;
+}
+
+.fs-status-badge {
+  font-size: 11px; color: #fff; padding: 2px 10px; border-radius: 10px; display: inline-block;
+}
+
+/* ── Timeline ── */
+.fs-timeline {
+  position: relative; padding: 20px 20px 20px 48px;
+  overflow-y: auto; max-height: 100%;
+}
+.fs-timeline-line {
+  position: absolute; left: 32px; top: 0; bottom: 0;
+  width: 2px; background: #252336;
+}
+
+.fs-timeline-chapter {
+  position: relative; margin: 20px 0 10px 0;
+  display: flex; align-items: center; gap: 12px;
+}
+.fs-timeline-dot-big {
+  position: absolute; left: -20px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; border-radius: 50%; background: #d4a574;
+  border: 3px solid #0b0a12; z-index: 2;
+}
+.fs-timeline-chapter-label {
+  font-size: 14px; font-weight: 600; color: #d4a574;
+  background: #14131e; padding: 4px 12px; border-radius: 6px;
+  border-left: 3px solid #d4a574;
+}
+
+.fs-timeline-item { position: relative; margin: 8px 0; display: flex; align-items: flex-start; gap: 16px; }
+.fs-timeline-dot {
+  position: absolute; left: -16px; top: 16px;
+  width: 8px; height: 8px; border-radius: 50%; background: #5aab8a;
+  border: 2px solid #0b0a12; z-index: 1;
+}
+
+.fs-timeline-card {
+  background: #1e1d30; border: 1px solid #252336; border-radius: 8px;
+  padding: 10px 14px; cursor: pointer; flex: 1;
+  transition: border-color 0.15s;
+}
+.fs-timeline-card:hover { border-color: #5aab8a; }
+
+.fs-timeline-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.fs-timeline-card-title { font-size: 13px; font-weight: 600; color: #d0cec8; }
+
+.fs-timeline-card-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #8a8798; }
+.fs-timeline-card-summary { font-size: 12px; color: #6b6880; margin-top: 6px; line-height: 1.4; }
+
+/* ── Modal ── */
+.fs-modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6); z-index: 1000;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 40px;
+}
+
+.fs-modal {
+  background: #14131e; border: 1px solid #252336; border-radius: 12px;
+  width: 640px; max-height: 85vh; display: flex; flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+
+.fs-modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px; border-bottom: 1px solid #252336;
+}
+.fs-modal-header h2 { margin: 0; font-size: 16px; color: #d0cec8; font-weight: 600; }
+
+.fs-modal-close {
+  background: transparent; border: none; color: #6b6880; font-size: 18px;
+  cursor: pointer; padding: 4px 8px; border-radius: 4px;
+}
+.fs-modal-close:hover { color: #c06060; background: #1e1d30; }
+
+.fs-modal-body {
+  flex: 1; overflow-y: auto; padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.fs-modal-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 20px; border-top: 1px solid #252336;
+}
+.fs-modal-actions { display: flex; gap: 8px; }
+
+/* ── Form ── */
+.fs-form-group { display: flex; flex-direction: column; gap: 4px; }
+
+.fs-form-row { display: flex; gap: 12px; }
+.fs-form-half { flex: 1; }
+
+.fs-form-label { font-size: 12px; color: #8a8798; font-weight: 500; }
+.fs-required { color: #c06060; }
+
+.fs-form-input, .fs-form-textarea, .fs-form-select {
+  background: #1e1d30; border: 1px solid #252336; color: #d0cec8;
+  padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none;
+  font-family: inherit;
+}
+.fs-form-input:focus, .fs-form-textarea:focus, .fs-form-select:focus { border-color: #5aab8a; }
+.fs-form-textarea { resize: vertical; min-height: 50px; }
+.fs-form-input::placeholder, .fs-form-textarea::placeholder { color: #6b6880; }
+
+/* ── Entity Picker ── */
+.fs-entity-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+.fs-entity-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #d0cec8; background: #252336;
+  padding: 2px 8px; border-radius: 4px;
+}
+.fs-entity-remove {
+  background: transparent; border: none; color: #c06060;
+  font-size: 14px; cursor: pointer; padding: 0; line-height: 1;
+}
+.fs-entity-remove:hover { color: #e07070; }
+
+.fs-entity-add {
+  margin-top: 2px; font-size: 11px; padding: 4px 8px;
+}
+
+/* ── Buttons ── */
+.fs-btn {
+  padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer;
+  border: 1px solid #252336; transition: all 0.15s;
+}
+
+.fs-btn-primary {
+  background: #d4a574; color: #1a1a1a; border-color: #d4a574; font-weight: 600;
+}
+.fs-btn-primary:hover { background: #c09363; }
+
+.fs-btn-cancel { background: transparent; color: #8a8798; }
+.fs-btn-cancel:hover { color: #d0cec8; background: #1e1d30; }
+
+.fs-btn-danger { background: transparent; color: #c06060; border-color: #3a2020; }
+.fs-btn-danger:hover { background: #3a2020; color: #e07070; }
+
+/* ── Scrollbar ── */
+.fs-board-list::-webkit-scrollbar,
+.fs-modal-body::-webkit-scrollbar,
+.fs-content::-webkit-scrollbar { width: 5px; }
+.fs-board-list::-webkit-scrollbar-thumb,
+.fs-modal-body::-webkit-scrollbar-thumb,
+.fs-content::-webkit-scrollbar-thumb { background: #252336; border-radius: 4px; }
+.fs-board-list::-webkit-scrollbar-track,
+.fs-modal-body::-webkit-scrollbar-track,
+.fs-content::-webkit-scrollbar-track { background: transparent; }

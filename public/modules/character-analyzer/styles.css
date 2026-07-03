@@ -1,0 +1,243 @@
+/* ================================================================
+   Character Analyzer Styles
+   Dark theme, consistent with NovelOS design system
+   ================================================================ */
+
+#view-character-analyzer {
+  box-sizing: border-box;
+}
+
+.ca-layout {
+  display: flex;
+  height: 100%;
+}
+
+/* ── 左侧表单 ── */
+.ca-left {
+  width: 320px;
+  min-width: 320px;
+  background: #14131e;
+  border-right: 1px solid #252336;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 16px;
+}
+.ca-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b6880;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 12px 0 8px;
+}
+.ca-section-title:first-child { margin-top: 0; }
+
+.ca-select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #252336;
+  background: #1e1d30;
+  color: #d0cec8;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+.ca-select:focus { border-color: #d4a57455; }
+
+.ca-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.ca-check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: #1e1d30;
+  font-size: 12px;
+  color: #c4c0d0;
+  cursor: pointer;
+  transition: .15s;
+}
+.ca-check-item:hover { background: #252336; }
+.ca-check-item input[type="checkbox"] { accent-color: #d4a574; }
+
+.ca-check-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ca-cat-chip {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid #333;
+  background: transparent;
+  color: #8a8798;
+  font-size: 11px;
+  cursor: pointer;
+  transition: .15s;
+}
+.ca-cat-chip:hover { border-color: #d4a574; color: #d4a574; }
+.ca-cat-chip.active { background: #d4a57422; border-color: #d4a574; color: #d4a574; }
+
+.ca-submit-btn {
+  margin-top: 16px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: #d4a574;
+  color: #0b0a12;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: .15s;
+}
+.ca-submit-btn:hover { background: #c09468; }
+.ca-submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.ca-loading {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  color: #d4a574;
+  font-size: 12px;
+  margin-top: 12px;
+}
+.ca-loading.visible { display: flex; }
+
+/* ── 右侧报告 ── */
+.ca-right {
+  flex: 1;
+  background: #0b0a12;
+  overflow-y: auto;
+  min-width: 0;
+}
+.ca-report {
+  padding: 24px;
+  max-width: 850px;
+}
+.ca-report-header {
+  margin-bottom: 20px;
+}
+.ca-report-character {
+  font-size: 20px;
+  font-weight: 700;
+  color: #d0cec8;
+}
+.ca-report-meta {
+  font-size: 12px;
+  color: #6b6880;
+  margin-top: 4px;
+}
+.ca-report-summary {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+}
+.ca-summary-chip {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.ca-summary-chip.severe { background: #c0606022; color: #c06060; border: 1px solid #c0606044; }
+.ca-summary-chip.warning { background: #d4a57422; color: #d4a574; border: 1px solid #d4a57444; }
+.ca-summary-chip.info { background: #6b9aed22; color: #6b9aed; border: 1px solid #6b9aed44; }
+
+/* ── 问题卡片 ── */
+.ca-issue-card {
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border-left: 3px solid;
+}
+.ca-issue-card.severe {
+  background: #c0606010;
+  border-color: #c06060;
+}
+.ca-issue-card.warning {
+  background: #d4a57410;
+  border-color: #d4a574;
+}
+.ca-issue-card.info {
+  background: #6b9aed10;
+  border-color: #6b9aed;
+}
+
+.ca-issue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.ca-issue-category {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.ca-issue-severity {
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.ca-issue-severity.severe { background: #c0606033; color: #c06060; }
+.ca-issue-severity.warning { background: #d4a57433; color: #d4a574; }
+.ca-issue-severity.info { background: #6b9aed33; color: #6b9aed; }
+
+.ca-issue-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #d0cec8;
+  margin-bottom: 6px;
+}
+.ca-issue-desc {
+  font-size: 12px;
+  color: #8a8798;
+  line-height: 1.7;
+  margin-bottom: 10px;
+}
+.ca-issue-quote {
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: #14131e;
+  font-size: 12px;
+  color: #c4c0d0;
+  font-style: italic;
+  border-left: 2px solid #333;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+}
+.ca-issue-suggestion {
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: #d4a57410;
+  font-size: 12px;
+  color: #d4a574;
+  line-height: 1.6;
+}
+.ca-issue-suggestion strong { color: #d4a574; }
+
+/* ── 空状态 ── */
+.ca-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #3a3750;
+  gap: 10px;
+}
+.ca-empty-icon { font-size: 48px; }
+.ca-empty-text { font-size: 13px; }

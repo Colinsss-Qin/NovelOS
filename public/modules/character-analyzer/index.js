@@ -6,7 +6,7 @@
 
 (function () {
   var state = {
-    projectId: "proj_demo",
+    projectId: null,
     characters: [],
     chapters: [],
     chapterMap: {},
@@ -26,7 +26,7 @@
       if (!container) { console.error("CharacterAnalyzer: container not found"); return; }
       container.innerHTML = '<div style="padding:40px;color:#d4a574;text-align:center"><p>🔍 角色分析器加载中…</p></div>';
 
-      state.projectId = projectId || "proj_demo";
+      state.projectId = projectId || null;
       _renderLayout();
       _initComponents();
       _loadData();

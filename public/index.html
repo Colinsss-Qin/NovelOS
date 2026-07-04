@@ -32,7 +32,7 @@
       <button class="nav-btn" data-tab="character" onclick="LayoutSkill.switchTab('character', this)">人物</button>
       <button class="nav-btn" data-tab="future" onclick="LayoutSkill.switchTab('future', this)">未来场景</button>
     </div>
-    <span class="project-name">📖 世界之刃</span>
+    <span class="project-name" id="topbar-project-name">📖 未选择项目</span>
   </div>
 
   <!-- WAR ROOM VIEW -->
@@ -50,14 +50,12 @@
     <div class="editor-toolbar">
       <span class="ch-title" id="ch-title">选择章节开始写作</span>
       <span class="ch-meta" id="ch-meta"></span>
+	      <span class="save-indicator" id="save-indicator"></span>
     </div>
     <div class="ai-actions">
       <button class="ai-btn primary" onclick="AIActions.generateChapter()">✨ 生成本章</button>
       <button class="ai-btn" onclick="AIActions.continueChapter()">→ 续写</button>
-      <button class="ai-btn" onclick="AIActions.rewriteChapter()">🔄 重写</button>
-      <button class="ai-btn" onclick="AIActions.polishChapter()">✏️ 润色</button>
-      <button class="ai-btn" onclick="AIActions.generateDialogue()">💬 对话</button>
-    </div>
+                      </div>
     <div id="editor-area">
       <div class="empty-state" id="empty-state">
         <span class="icon">✍️</span>
@@ -97,19 +95,6 @@
 <div id="toast"></div>
 
 </div><!-- /app -->
-
-<!-- ============================================================ -->
-<!--  DATA LAYER (will move to knowledge-skill in next phase)     -->
-<!-- ============================================================ -->
-<script>
-	var novelData = {
-	  project: { name: "我的故事", genre: "未设定", targetWords: 100000 },
-	  volumes: []
-	};
-
-	// Chapter lookup map (populated when volumes are created via Outline)
-	var chapterMap = {};
-</script>
 
 <!-- ============================================================ -->
 <!--  LAYOUT SKILL (loaded from public/skills/layout-skill/)       -->
@@ -242,7 +227,7 @@ var StoryBibleTemplates = {};
 <!-- ============================================================ -->
 <!--  AI ACTIONS — 前端 AI 调用桥接层                                -->
 <!-- ============================================================ -->
-<script>
+<script type="text/plain" data-disabled="broken-ai-actions">
 var AIActions = (function () {
 
   var editorEl = null;
@@ -254,7 +239,7 @@ var AIActions = (function () {
   /** Core: call /api/generate SSE and stream result into editor */
   function _streamGenerate(task, promptText) {
     var editor = getEditor();
-    if (!editor) return;
+    if (!editor) { LayoutSkill.showToast("❌ 编辑器未就绪，请先选择章节"); return; }
 
     LayoutSkill.showToast("🤖 AI 生成中…");
     editor.disabled = true;
@@ -275,22 +260,33 @@ var AIActions = (function () {
       var buffer = "";
       var result = "";
       var isDemo = false;
+      var streamDone = false;
 
       function read() {
         reader.read().then(function (chunk) {
           if (chunk.done) {
             editor.disabled = false;
-            LayoutSkill.showToast(isDemo ? "✅ 演示内容已生成" : "✅ 生成完成");
+            var charCount = result.replace(/s/g, "").length;
+            if (charCount > 0) {
+              LayoutSkill.showToast(isDemo ? "✅ 演示内容已生成（" + charCount + " 字）" : "✅ 生成完成（" + charCount + " 字）");
+              if (typeof LayoutSkill !== "undefined" && LayoutSkill.saveChapter) {
+                setTimeout(function () { LayoutSkill.saveChapter(); }, 500);
+              }
+            } else {
+              LayoutSkill.showToast("⚠️ AI 未返回内容，请检查 API Key 配置");
+            }
             return;
           }
 
           buffer += decoder.decode(chunk.value, { stream: true });
-          var lines = buffer.split("\n");
+          var lines = buffer.split("
+");
           buffer = lines.pop() || "";
 
-          lines.forEach(function (line) {
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
             var trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith("data: ")) return;
+            if (!trimmed || !trimmed.startsWith("data: ")) continue;
             var data = trimmed.slice(6);
             try {
               var json = JSON.parse(data);
@@ -303,16 +299,16 @@ var AIActions = (function () {
                 isDemo = true;
                 LayoutSkill.showToast("📝 演示模式（需配置 API Key）");
               }
-              if (json.done) return;
               if (json.error) {
                 editor.disabled = false;
                 LayoutSkill.showToast("❌ " + json.error);
-                return;
+                streamDone = true;
               }
+              if (json.done) streamDone = true;
             } catch (e) {}
-          });
+          }
 
-          read();
+          if (!streamDone) read();
         }).catch(function (err) {
           editor.disabled = false;
           LayoutSkill.showToast("❌ " + err.message);
@@ -326,66 +322,399 @@ var AIActions = (function () {
     });
   }
 
+  function _getProjectId() {
+    if (typeof LayoutSkill !== "undefined" && LayoutSkill.getActiveProjectId) {
+      return LayoutSkill.getActiveProjectId();
+    }
+    return null;
+  }
+
   return {
     generateChapter: function () {
-      var editor = getEditor();
-      var chTitle = document.getElementById("ch-title");
-      var promptText = "请根据以下大纲生成一章完整内容：\n" + (chTitle ? chTitle.textContent : "新章节");
-      _streamGenerate("chapter_generate", promptText);
+      var chapter = (typeof LayoutSkill !== "undefined" && LayoutSkill.getActiveChapter)
+        ? LayoutSkill.getActiveChapter()
+        : null;
+      if (!chapter) {
+        LayoutSkill.showToast("请先在左侧选择或创建一个章节");
+        return;
+      }
+      var parts = ["请根据以下信息生成一章完整的小说正文。", ""];
+      if (chapter.title) parts.push("【章节标题】" + chapter.title);
+      if (chapter.summary) parts.push("【章节摘要】" + chapter.summary);
+      var project = (typeof LayoutSkill !== "undefined" && LayoutSkill.getState) ? LayoutSkill.getState().activeProject : null;
+      if (project) {
+        parts.push("【作品名称】" + (project.name || ""));
+        parts.push("【作品类型】" + (project.genre || ""));
+      }
+      parts.push("");
+      parts.push("写作要求：文笔流畅，有画面感，字数2000-4000字。输出纯正文，不要输出设定说明。");
+      _streamGenerate("chapter_generate", parts.join("
+"));
     },
 
     continueChapter: function () {
       var editor = getEditor();
-      var currentText = editor ? (editor.value || "").slice(-500) : "";
+      var currentText = editor ? (editor.value || "").slice(-800) : "";
       if (!currentText.trim()) {
         LayoutSkill.showToast("请先选择章节或输入一些内容");
         return;
       }
-      var promptText = "请续写以下内容，保持风格一致：\n\n" + currentText;
+      var promptText = "请续写以下内容，保持风格、人物和世界观一致：
+
+" + currentText + "
+
+---
+请从以上内容结束处自然续写。";
       _streamGenerate("chapter_continue", promptText);
-    },
-
-    rewriteChapter: function () {
-      var editor = getEditor();
-      var selectedText = "";
-      if (editor && editor.selectionStart !== undefined) {
-        selectedText = editor.value.substring(editor.selectionStart, editor.selectionEnd);
-      }
-      if (!selectedText.trim()) {
-        LayoutSkill.showToast("请先选中要重写的文本段落");
-        return;
-      }
-      var promptText = "请重写以下内容，保持核心情节不变，优化表达：\n\n" + selectedText;
-      _streamGenerate("chapter_rewrite", promptText);
-    },
-
-    polishChapter: function () {
-      var editor = getEditor();
-      var selectedText = "";
-      if (editor && editor.selectionStart !== undefined) {
-        selectedText = editor.value.substring(editor.selectionStart, editor.selectionEnd);
-      }
-      if (!selectedText.trim()) {
-        LayoutSkill.showToast("请先选中要润色的文本段落");
-        return;
-      }
-      var promptText = "请润色以下内容，修正语病，增强画面感：\n\n" + selectedText;
-      _streamGenerate("chapter_polish", promptText);
-    },
-
-    generateDialogue: function () {
-      var editor = getEditor();
-      var contextText = editor ? (editor.value || "").slice(-1000) : "";
-      var promptText = "根据以下场景，生成一段生动的角色对话：\n\n" + (contextText || "请先生成章节内容作为上下文");
-      _streamGenerate("dialogue_generate", promptText);
     }
   };
 })();
 </script>
 <script>
-LayoutSkill.init(novelData, chapterMap);
+var AIActions = (function () {
+  var editorEl = null;
+
+  function getEditor() {
+    if (!editorEl) editorEl = document.getElementById("editor");
+    return editorEl;
+  }
+
+  function toast(message) {
+    if (typeof LayoutSkill !== "undefined" && LayoutSkill.showToast) {
+      LayoutSkill.showToast(message);
+    }
+  }
+
+  function streamGenerate(task, promptText, onDone) {
+    var editor = getEditor();
+    if (!editor) {
+      toast("编辑器未就绪，请先选择章节");
+      if (onDone) onDone();
+      return;
+    }
+
+    toast("AI 生成中...");
+    editor.disabled = true;
+
+    fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ task: task, userPrompt: promptText, maxTokens: 4096 })
+    }).then(function (response) {
+      if (!response.ok) throw new Error("HTTP " + response.status);
+
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = "";
+      var result = "";
+      var isDemo = false;
+      var streamDone = false;
+
+      function read() {
+        reader.read().then(function (chunk) {
+          if (chunk.done) {
+            editor.disabled = false;
+            if (onDone) onDone();
+            var charCount = result.replace(/\s/g, "").length;
+            if (charCount > 0) {
+              toast(isDemo ? "演示内容已生成（" + charCount + " 字）" : "生成完成（" + charCount + " 字）");
+              if (typeof LayoutSkill !== "undefined" && LayoutSkill.saveChapter) {
+                setTimeout(function () { LayoutSkill.saveChapter(); }, 500);
+              }
+            } else {
+              toast("AI 未返回内容，请检查 API Key 配置");
+            }
+            return;
+          }
+
+          buffer += decoder.decode(chunk.value, { stream: true });
+          var lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (var i = 0; i < lines.length; i++) {
+            var trimmed = lines[i].trim();
+            if (!trimmed || !trimmed.startsWith("data: ")) continue;
+            try {
+              var json = JSON.parse(trimmed.slice(6));
+              if (json.token) {
+                result += json.token;
+                editor.value = result;
+                editor.scrollTop = editor.scrollHeight;
+              }
+              if (json.status === "demo") isDemo = true;
+              if (json.error) {
+                editor.disabled = false;
+                toast("生成失败：" + json.error);
+                streamDone = true;
+              }
+              if (json.done) streamDone = true;
+            } catch (e) {}
+          }
+
+          if (!streamDone) read();
+        }).catch(function (err) {
+          editor.disabled = false;
+          toast("生成失败：" + err.message);
+        });
+      }
+
+      read();
+    }).catch(function (err) {
+      editor.disabled = false;
+      toast("请求失败：" + err.message);
+    });
+  }
+
+  function _updateGenContext(chapter, charNames, projectName) {
+    var container = document.getElementById("right-content");
+    if (!container) return;
+    var html = '<div class="section"><div class="section-title">🤖 本次生成上下文</div>';
+    html += '<div class="ctx-item"><div class="ctx-label">章节</div><div class="ctx-value">' + (chapter.title || "未命名") + '</div></div>';
+    if (chapter.summary) {
+      html += '<div class="ctx-item"><div class="ctx-label">剧情种子</div><div class="ctx-value">' + chapter.summary + '</div></div>';
+    }
+    if (projectName) {
+      html += '<div class="ctx-item"><div class="ctx-label">作品</div><div class="ctx-value">' + projectName + '</div></div>';
+    }
+    html += '<div class="ctx-item"><div class="ctx-label">注入人物</div><div class="ctx-value">' + (charNames.length > 0 ? charNames.join("、") : "无（未加载到人物设定）") + '</div></div>';
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  return {
+    generateChapter: function () {
+      var chapter = (typeof LayoutSkill !== "undefined" && LayoutSkill.getActiveChapter)
+        ? LayoutSkill.getActiveChapter()
+        : null;
+      if (!chapter) {
+        toast("请先在左侧选择或创建一个章节");
+        return;
+      }
+
+      var project = (typeof LayoutSkill !== "undefined" && LayoutSkill.getState)
+        ? LayoutSkill.getState().activeProject
+        : null;
+      var projectId = project ? project.id : null;
+
+      // Button loading state
+      var genBtn = document.querySelector(".ai-btn.primary");
+      if (genBtn) { genBtn.disabled = true; genBtn.textContent = "⏳ 生成中..."; }
+
+      function doGenerate(characters) {
+        var parts = ["请根据以下信息生成一章完整的小说正文。", ""];
+        if (chapter.title) parts.push("【章节标题】" + chapter.title);
+        if (chapter.summary) parts.push("【章节摘要】" + chapter.summary);
+        if (project) {
+          parts.push("【作品名称】" + (project.name || ""));
+          parts.push("【作品类型】" + (project.genre || ""));
+        }
+
+        var charNames = [];
+        if (characters && characters.length > 0) {
+          parts.push("");
+          parts.push("【相关人物设定】");
+          characters.forEach(function (c) {
+            var desc = c.summary || c.description || "";
+            parts.push("- " + c.name + (desc ? "：" + desc : ""));
+            charNames.push(c.name);
+          });
+        }
+
+        parts.push("");
+        parts.push("写作要求：文笔流畅，有画面感，字数 2000-4000 字。输出纯正文，不要输出设定说明。");
+
+        _updateGenContext(chapter, charNames, project ? project.name : null);
+
+        streamGenerate("chapter_generate", parts.join("\n"), function () {
+          if (genBtn) { genBtn.disabled = false; genBtn.textContent = "✨ 生成本章"; }
+        });
+      }
+
+      // Fetch characters from Story Bible for context enrichment
+      if (projectId) {
+        fetch("/api/items?projectId=" + encodeURIComponent(projectId) + "&type=character&limit=30")
+          .then(function (r) { return r.json(); })
+          .then(function (result) {
+            var characters = (result.success && result.data && result.data.items) ? result.data.items : [];
+            doGenerate(characters);
+          })
+          .catch(function () {
+            doGenerate([]);
+          });
+      } else {
+        doGenerate([]);
+      }
+    },
+
+    continueChapter: function () {
+      var editor = getEditor();
+      var currentText = editor ? (editor.value || "").slice(-800) : "";
+      if (!currentText.trim()) {
+        toast("请先选择章节或输入一些内容");
+        return;
+      }
+
+      var promptText = [
+        "请续写以下内容，保持风格、人物和世界观一致：",
+        "",
+        currentText,
+        "",
+        "---",
+        "请从以上内容结束处自然续写。"
+      ].join("\n");
+      streamGenerate("chapter_continue", promptText);
+    }
+  };
+})();
+</script>
+<script>
+var AIActions = (function () {
+  function editor() {
+    return document.getElementById("editor");
+  }
+
+  function toast(message) {
+    if (window.LayoutSkill && LayoutSkill.showToast) LayoutSkill.showToast(message);
+  }
+
+  function setGenerateButton(loading) {
+    var btn = document.querySelector(".ai-btn.primary");
+    if (!btn) return;
+    btn.disabled = !!loading;
+    btn.textContent = loading ? "生成中..." : "生成本章";
+  }
+
+  function activeChapter() {
+    return window.LayoutSkill && LayoutSkill.getActiveChapter ? LayoutSkill.getActiveChapter() : null;
+  }
+
+  function activeProject() {
+    return window.LayoutSkill && LayoutSkill.getState ? LayoutSkill.getState().activeProject : null;
+  }
+
+  function streamGenerate(task, promptText) {
+    var ed = editor();
+    var chapter = activeChapter();
+    if (!ed || !chapter) {
+      toast("请先新建并选择章节");
+      return;
+    }
+
+    var hadError = false;
+    var result = "";
+    ed.disabled = true;
+    setGenerateButton(true);
+    toast("AI 生成中...");
+
+    fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ task: task, userPrompt: promptText, maxTokens: 4096 })
+    }).then(function (response) {
+      if (!response.ok) {
+        return response.json().catch(function () { return {}; }).then(function (json) {
+          throw new Error(json.error || ("HTTP " + response.status));
+        });
+      }
+
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = "";
+
+      function read() {
+        return reader.read().then(function (chunk) {
+          if (chunk.done) return;
+          buffer += decoder.decode(chunk.value, { stream: true });
+          var lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          lines.forEach(function (line) {
+            var trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith("data: ")) return;
+            try {
+              var json = JSON.parse(trimmed.slice(6));
+              if (json.error) {
+                hadError = true;
+                toast(json.error);
+                return;
+              }
+              if (json.token && !hadError) {
+                result += json.token;
+                ed.value = result;
+                ed.scrollTop = ed.scrollHeight;
+              }
+            } catch (e) {}
+          });
+
+          if (!hadError) return read();
+        });
+      }
+
+      return read();
+    }).then(function () {
+      ed.disabled = false;
+      setGenerateButton(false);
+      if (hadError) return;
+      if (!result.trim()) {
+        toast("AI 未返回内容");
+        return;
+      }
+      toast("生成完成，正在保存...");
+      if (window.LayoutSkill && LayoutSkill.saveChapter) {
+        LayoutSkill.saveChapter().then(function () { toast("生成内容已保存"); });
+      }
+    }).catch(function (err) {
+      ed.disabled = false;
+      setGenerateButton(false);
+      toast(err.message || "生成失败");
+    });
+  }
+
+  function buildChapterPrompt(prefix) {
+    var chapter = activeChapter();
+    var project = activeProject();
+    var ed = editor();
+    var parts = [prefix || "请根据以下信息生成一章完整小说正文。", ""];
+    if (project) {
+      parts.push("作品：" + (project.name || project.title || ""));
+      parts.push("类型：" + (project.genre || ""));
+    }
+    if (chapter) {
+      parts.push("章节标题：" + (chapter.title || ""));
+      if (chapter.summary) parts.push("章节摘要：" + chapter.summary);
+    }
+    if (ed && ed.value.trim()) {
+      parts.push("");
+      parts.push("当前正文：");
+      parts.push(ed.value.slice(-1200));
+    }
+    parts.push("");
+    parts.push("要求：只输出小说正文，不要输出解释说明。");
+    return parts.join("\n");
+  }
+
+  return {
+    generateChapter: function () {
+      if (!activeChapter()) {
+        toast("请先新建并选择章节");
+        return;
+      }
+      streamGenerate("chapter_generate", buildChapterPrompt("请生成本章正文。"));
+    },
+    continueChapter: function () {
+      var ed = editor();
+      if (!activeChapter() || !ed || !ed.value.trim()) {
+        toast("请先选择章节并输入一些内容");
+        return;
+      }
+      streamGenerate("chapter_continue", buildChapterPrompt("请从当前正文结尾自然续写。"));
+    }
+  };
+})();
+
+LayoutSkill.init();
 try {
-  StoryBible.init("view-story-bible", "proj_demo", "世界之刃", "奇幻武侠");
+  StoryBible.init("view-story-bible", null, "", "");
 } catch(e) {
   var el = document.getElementById('view-story-bible');
   if (el) {
@@ -394,7 +723,7 @@ try {
   }
 }
 try {
-  StoryMap.init("view-story-map", "proj_demo");
+  StoryMap.init("view-story-map", null);
 } catch(e) {
   var mel = document.getElementById('view-story-map');
   if (mel) {
@@ -403,7 +732,7 @@ try {
   }
 }
 try {
-  CharacterManager.init("view-character-manager", "proj_demo");
+  CharacterManager.init("view-character-manager", null);
 } catch(e) {
   var cel = document.getElementById('view-character-manager');
   if (cel) {
@@ -412,7 +741,7 @@ try {
   }
 }
 try {
-  OutlineBoard.init("view-outline-board", "proj_demo");
+  OutlineBoard.init("view-outline-board", null);
 } catch(e) {
   var oel = document.getElementById('view-outline-board');
   if (oel) {
@@ -421,7 +750,7 @@ try {
   }
 }
 try {
-  WarRoom.init("view-war-room", "proj_demo");
+  WarRoom.init("view-war-room", null);
 } catch(e) {
   var wrel = document.getElementById('view-war-room');
   if (wrel) {
@@ -430,7 +759,7 @@ try {
   }
 }
 try {
-  FutureScene.init("view-future-scene", "proj_demo");
+  FutureScene.init("view-future-scene", null);
 } catch(e) {
   var fsel = document.getElementById('view-future-scene');
   if (fsel) {

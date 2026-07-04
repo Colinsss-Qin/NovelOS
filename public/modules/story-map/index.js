@@ -6,8 +6,8 @@
 
 (function () {
   var state = {
-    projectId: "proj_demo",
-    storageKey: "story-map-proj_demo",
+    projectId: null,
+    storageKey: "story-map-",
   };
 
   var container = null;
@@ -24,7 +24,7 @@
         return;
       }
 
-      state.projectId = projectId || "proj_demo";
+      state.projectId = projectId || null;
       state.storageKey = "story-map-" + state.projectId;
 
       // Show loading
@@ -256,88 +256,8 @@
       console.warn("StoryMap: failed to load from storage:", e.message);
     }
 
-    // No saved data → load demo
-    _loadDemoData();
-  }
-
-  function _loadDemoData() {
-    var features = [
-      {
-        type: "Feature",
-        geometry: {
-          type: "Polygon",
-          coordinates: [
-            [
-              [-100, 60],
-              [0, 70],
-              [80, 50],
-              [100, 0],
-              [60, -60],
-              [-40, -70],
-              [-120, -40],
-              [-140, 10],
-              [-100, 60],
-            ],
-          ],
-        },
-        properties: { name: "中央大陆", type: "continent", description: "世界的主大陆" },
-      },
-      {
-        type: "Feature",
-        geometry: { type: "LineString", coordinates: [[-80, 35],[-60, 42],[-40, 30],[-20, 35]] },
-        properties: { name: "龙骨山脉", type: "mountain", description: "横贯大陆中部的巨大山脉" },
-      },
-      {
-        type: "Feature",
-        geometry: { type: "Polygon", coordinates: [[[50, 20],[80, 10],[90, 30],[60, 40],[50, 20]]] },
-        properties: { name: "东境沼泽", type: "swamp", description: "东部的迷雾沼泽" },
-      },
-      {
-        type: "Feature",
-        geometry: { type: "Polygon", coordinates: [[[-130, 20],[-100, 10],[-80, 25],[-110, 40],[-130, 20]]] },
-        properties: { name: "西荒沙漠", type: "desert", description: "西部的无尽沙海" },
-      },
-      {
-        type: "Feature",
-        geometry: { type: "Polygon", coordinates: [[[-50, 70],[-10, 75],[30, 65],[10, 85],[-50, 70]]] },
-        properties: { name: "北境雪原", type: "snow", description: "北方的终年冰雪之地" },
-      },
-      {
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [-70, 38] },
-        properties: { name: "皇城·天都", type: "city", description: "大陆中央的帝国皇城" },
-      },
-      {
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [-110, 25] },
-        properties: { name: "沙舟城", type: "city", description: "沙漠边缘的贸易重镇" },
-      },
-      {
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [65, 28] },
-        properties: { name: "青云宗", type: "city", description: "东部山区的修仙宗门" },
-      },
-      {
-        type: "Feature",
-        geometry: { type: "LineString", coordinates: [[-60, 72],[-30, 62],[-10, 55],[10, 50]] },
-        properties: { name: "天河", type: "river", description: "从北境流向中央大陆的主河" },
-      },
-      {
-        type: "Feature",
-        geometry: { type: "Polygon", coordinates: [[[-35, 58],[-15, 60],[-5, 52],[-25, 50],[-35, 58]]] },
-        properties: { name: "镜湖", type: "lake", description: "龙骨山脉北麓的大湖" },
-      },
-      {
-        type: "Feature",
-        geometry: { type: "Polygon", coordinates: [[[-80, -20],[-40, -10],[0, -30],[-40, -50],[-80, -20]]] },
-        properties: { name: "南境雨林", type: "forest", description: "南方的原始密林" },
-      },
-    ];
-
-    var geojson = { type: "FeatureCollection", features: features };
-    GeoLayer.render(geojson);
-    StoryMap.saveToStorage();
-    console.log("StoryMap: loaded demo data (" + features.length + " features)");
+    // No saved data → start with empty map
+    GeoLayer.render({ type: "FeatureCollection", features: [] });
   }
 
   // ═══════════════════════════════════════

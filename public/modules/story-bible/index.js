@@ -8,7 +8,7 @@
 
   // Module state
   var state = {
-    projectId: "proj_demo",
+    projectId: null,
     activeType: "character",
     view: "list",      // "list" | "detail" | "editor"
     detailItem: null,
@@ -33,7 +33,7 @@
       // 显示加载中状态
       container.innerHTML = '<div style="padding:40px;color:#d4a574;text-align:center"><p>📖 故事圣经加载中…</p></div>';
 
-      state.projectId = projectId || "proj_demo";
+      state.projectId = projectId || null;
 
       // Build layout
       _renderLayout();
@@ -210,12 +210,18 @@
 
   function _doDelete() {
     if (!state.detailItem) return;
-    KnowledgeSkill.delete(state.detailItem.id);
-    LayoutSkill.showToast("已删除");
-    state.detailItem = null;
-    _showList();
-    TagCloud.render(state.projectId);
-    TypeNav.render(state.projectId);
+    var itemId = state.detailItem.id;
+    KnowledgeSkill.delete(itemId).then(function (result) {
+      if (!result.success) {
+        LayoutSkill.showToast("删除失败: " + result.error);
+        return;
+      }
+      LayoutSkill.showToast("已删除");
+      state.detailItem = null;
+      _showList();
+      TagCloud.render(state.projectId);
+      TypeNav.render(state.projectId);
+    });
   }
 
   function _aiExpandCurrentItem() {
@@ -248,25 +254,32 @@
 
     if (state.editorMode === "create") {
       data.projectId = state.projectId;
-      var createResult = KnowledgeSkill.create(data);
-      if (!createResult.success) {
-        LayoutSkill.showToast("创建失败: " + createResult.error);
-        return;
-      }
-      LayoutSkill.showToast("已创建");
-    } else {
-      var updateResult = KnowledgeSkill.update(data.id || state.editorItem.id, data);
+      KnowledgeSkill.create(data).then(function (createResult) {
+        if (!createResult.success) {
+          LayoutSkill.showToast("创建失败: " + createResult.error);
+          return;
+        }
+        LayoutSkill.showToast("已创建");
+        _showList();
+        TypeNav.render(state.projectId);
+        TagCloud.render(state.projectId);
+      });
+      return;
+    }
+
+    // Edit mode
+    var itemId = data.id || state.editorItem.id;
+    KnowledgeSkill.update(itemId, data).then(function (updateResult) {
       if (!updateResult.success) {
         LayoutSkill.showToast("更新失败: " + updateResult.error);
         return;
       }
       state.detailItem = updateResult.data;
       LayoutSkill.showToast("已保存");
-    }
-
-    _showList();
-    TypeNav.render(state.projectId);
-    TagCloud.render(state.projectId);
+      _showList();
+      TypeNav.render(state.projectId);
+      TagCloud.render(state.projectId);
+    });
   }
 
   function _onTagFilter(tags) {

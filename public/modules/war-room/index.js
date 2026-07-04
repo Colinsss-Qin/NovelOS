@@ -6,7 +6,7 @@
 (function () {
   "use strict";
 
-  var state = { projectId: "proj_demo", data: null };
+  var state = { projectId: null, data: null };
   var container = null;
 
   // ── Helpers ──
@@ -23,11 +23,46 @@
 
   // ── Render ──
 
+  function _renderEmpty() {
+    if (!container) return;
+    container.innerHTML =
+      '<div class="wr-dashboard">' +
+      '<div class="wr-header">' +
+      '<div class="wr-project-name" style="color:#6b6880">未选择项目</div>' +
+      '<div class="wr-project-genre">请先在创作台创建项目</div>' +
+      '</div>' +
+      '<div class="wr-section">' +
+      '<div class="wr-section-title">📊 写作进度</div>' +
+      '<div class="wr-progress-bar-wrap">' +
+      '<div class="wr-progress-bar" style="width:0%;"></div>' +
+      '</div>' +
+      '<div class="wr-progress-text">0 / 0 章已完成（0%）</div>' +
+      '</div>' +
+      '<div class="wr-section">' +
+      '<div class="wr-section-title">📈 数据概览</div>' +
+      '<div class="wr-cards">' +
+      '<div class="wr-card"><div class="wr-card-icon">📚</div><div class="wr-card-value">0</div><div class="wr-card-label">故事圣经条目</div></div>' +
+      '<div class="wr-card"><div class="wr-card-icon">🗂️</div><div class="wr-card-value">0</div><div class="wr-card-label">大纲节点（0卷0章）</div></div>' +
+      '<div class="wr-card"><div class="wr-card-icon">🔮</div><div class="wr-card-value">0</div><div class="wr-card-label">未来场景</div></div>' +
+      '<div class="wr-card"><div class="wr-card-icon">✍️</div><div class="wr-card-value">0</div><div class="wr-card-label">总字数</div></div>' +
+      '</div></div>' +
+      '<div class="wr-section">' +
+      '<div class="wr-section-title">⚡ 快捷入口</div>' +
+      '<div class="wr-actions">' +
+      '<button class="wr-action-btn" onclick="LayoutSkill.switchTab(\'studio\', document.querySelector(\'[data-tab=studio]\'))">✍️ 继续写作</button>' +
+      '<button class="wr-action-btn" onclick="LayoutSkill.switchTab(\'outline\', document.querySelector(\'[data-tab=outline]\'))">🗂️ 完善大纲</button>' +
+      '<button class="wr-action-btn" onclick="LayoutSkill.switchTab(\'bible\', document.querySelector(\'[data-tab=bible]\'))">📚 整理设定</button>' +
+      '<button class="wr-action-btn" onclick="ImportAssistant.open()">📥 导入文档</button>' +
+      '</div>' +
+      '</div>' +
+      '</div>';
+  }
+
   function _render() {
     if (!container) return;
     var d = state.data;
     if (!d) {
-      container.innerHTML = '<div style="padding:60px;text-align:center;color:#6b6880">⏳ 加载作战室数据...</div>';
+      _renderEmpty();
       return;
     }
 
@@ -120,6 +155,7 @@
   // ── Data Fetching ──
 
   function _loadData() {
+    if (!state.projectId) { _renderEmpty(); return; }
     fetch("/api/projects/" + encodeURIComponent(state.projectId) + "/dashboard")
       .then(function (r) { return r.json(); })
       .then(function (result) {
@@ -127,11 +163,13 @@
           state.data = result.data;
           _render();
         } else {
-          container.innerHTML = '<div style="padding:40px;color:#c06060;text-align:center"><h3>加载失败</h3><p>' + _esc(result.error || "未知错误") + '</p></div>';
+          state.data = null;
+          _renderEmpty();
         }
       })
       .catch(function (e) {
-        container.innerHTML = '<div style="padding:40px;color:#c06060;text-align:center"><h3>网络错误</h3><p>' + _esc(e.message) + '</p></div>';
+        state.data = null;
+        _renderEmpty();
       });
   }
 
@@ -142,7 +180,12 @@
       try {
         container = document.getElementById(containerId);
         if (!container) { console.error("WarRoom: container #" + containerId + " not found"); return; }
-        state.projectId = projectId || "proj_demo";
+        state.projectId = projectId || null;
+        if (!state.projectId) {
+          state.data = null;
+          _renderEmpty();
+          return;
+        }
         container.innerHTML = '<div style="padding:60px;text-align:center;color:#6b6880">⏳ 加载中...</div>';
         _loadData();
       } catch (e) {

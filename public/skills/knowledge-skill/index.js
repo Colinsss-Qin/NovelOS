@@ -32,21 +32,57 @@
   function create(opts) {
     // Validate type
     if (!opts.type || !KnowledgeTypeLabel[opts.type]) {
-      return { success: false, error: "Invalid type: " + opts.type };
+      return Promise.resolve({ success: false, error: "Invalid type: " + opts.type });
     }
     // Validate name
     if (!opts.name || !opts.name.trim()) {
-      return { success: false, error: "name is required" };
+      return Promise.resolve({ success: false, error: "name is required" });
     }
     // Validate attrs
     var validation = validateAttrs(opts.type, opts.attrs);
     if (!validation.valid) {
-      return { success: false, error: "Attrs validation failed: " + validation.errors.join("; ") };
+      return Promise.resolve({ success: false, error: "Attrs validation failed: " + validation.errors.join("; ") });
     }
 
-    var item = createItem(opts);
-    insert(item);
-    return { success: true, data: item };
+    return fetch("/api/items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        projectId: opts.projectId,
+        type: opts.type,
+        name: opts.name.trim(),
+        summary: opts.summary || "",
+        description: opts.description || "",
+        tags: opts.tags || [],
+        aliases: opts.aliases || [],
+        attrs: opts.attrs || {}
+      })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (result) {
+      if (!result.success) {
+        return { success: false, error: result.error || "创建失败" };
+      }
+      var apiItem = result.data;
+      var item = {
+        id: apiItem.id,
+        projectId: apiItem.projectId,
+        type: apiItem.type,
+        name: apiItem.name,
+        aliases: apiItem.aliases ? apiItem.aliases.split(",").map(function (s) { return s.trim(); }) : [],
+        summary: apiItem.summary || "",
+        description: apiItem.description || "",
+        tags: apiItem.tags ? apiItem.tags.split(",").map(function (s) { return s.trim(); }) : [],
+        attrs: apiItem.attrs || {},
+        createdAt: apiItem.createdAt || new Date().toISOString(),
+        updatedAt: apiItem.updatedAt || new Date().toISOString()
+      };
+      insert(item);
+      return { success: true, data: item };
+    })
+    .catch(function (err) {
+      return { success: false, error: err.message };
+    });
   }
 
   /**
@@ -81,18 +117,59 @@
    * Update an item partially.
    */
   function patch(id, data) {
-    var item = update(id, data);
-    if (!item) return { success: false, error: "Not found" };
-    return { success: true, data: item };
+    return fetch("/api/items/" + encodeURIComponent(id), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: data.name,
+        summary: data.summary,
+        description: data.description,
+        tags: data.tags,
+        aliases: data.aliases,
+        attrs: data.attrs
+      })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (result) {
+      if (!result.success) {
+        return { success: false, error: result.error || "更新失败" };
+      }
+      var apiItem = result.data;
+      // Sync to local store
+      var patchData = {
+        name: apiItem.name,
+        summary: apiItem.summary || "",
+        description: apiItem.description || "",
+        tags: apiItem.tags ? apiItem.tags.split(",").map(function (s) { return s.trim(); }) : [],
+        aliases: apiItem.aliases ? apiItem.aliases.split(",").map(function (s) { return s.trim(); }) : [],
+        attrs: apiItem.attrs || {}
+      };
+      var item = update(id, patchData);
+      return { success: true, data: item };
+    })
+    .catch(function (err) {
+      return { success: false, error: err.message };
+    });
   }
 
   /**
    * Delete an item.
    */
   function del(id) {
-    var ok = remove(id);
-    if (!ok) return { success: false, error: "Not found" };
-    return { success: true, data: null };
+    return fetch("/api/items/" + encodeURIComponent(id), {
+      method: "DELETE"
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (result) {
+      if (!result.success) {
+        return { success: false, error: result.error || "删除失败" };
+      }
+      remove(id);
+      return { success: true, data: null };
+    })
+    .catch(function (err) {
+      return { success: false, error: err.message };
+    });
   }
 
   /**

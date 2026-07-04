@@ -19,7 +19,7 @@ function created(res, r) { if (r.success) res.status(201).json(r); else res.stat
 function notFound(res, r) { if (r.success) res.json(r); else res.status(404).json(r); }
 
 // ── Stories ──
-router.get("/stories", (req, res) => ok(res, listStories(req.query.projectId || "proj_demo")));
+router.get("/stories", (req, res) => ok(res, listStories(req.query.projectId || "")));
 router.post("/stories", (req, res) => created(res, createStory(req.body)));
 router.get("/stories/:id", (req, res) => notFound(res, getStory(req.params.id)));
 router.put("/stories/:id", (req, res) => ok(res, updateStory(req.params.id, req.body)));

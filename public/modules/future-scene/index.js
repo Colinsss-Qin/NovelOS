@@ -17,7 +17,7 @@
 
   // ── Private State ──
   var state = {
-    projectId: "proj_demo",
+    projectId: null,
     view: "board",           // "board" | "inbox" | "timeline"
     scenes: [],              // All FutureScene items
     activeScene: null,       // Currently viewing/editing
@@ -325,7 +325,7 @@
           console.error("FutureScene: container #" + containerId + " not found");
           return;
         }
-        state.projectId = projectId || "proj_demo";
+        state.projectId = projectId || null;
 
         // Show loading
         container.innerHTML = '<div class="fs-loading">⏳ 加载未来场景库...</div>';

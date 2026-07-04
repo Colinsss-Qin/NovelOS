@@ -26,7 +26,7 @@
   };
 
   var state = {
-    projectId: "proj_demo",
+    projectId: null,
     phase: "upload",
     suggestions: [],
     selectedIds: {},
@@ -426,7 +426,7 @@
 
   window.ImportAssistant = {
     open: function (projectId) {
-      state.projectId = projectId || (typeof WarRoom !== "undefined" && WarRoom.getState ? WarRoom.getState().projectId : null) || "proj_demo";
+      state.projectId = projectId || (typeof WarRoom !== "undefined" && WarRoom.getState ? WarRoom.getState().projectId : null) || null;
       _reset();
       _createModal();
       _renderUpload();

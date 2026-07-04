@@ -96,6 +96,10 @@ app.use("/api/future-scenes", futureSceneRouter);
 const importRouter = require("./src/modules/import-assistant");
 app.use("/api/import", importRouter);
 
+// Context — /api/context/chapter (Writing Studio prompt context)
+const contextRouter = require("./src/modules/context-router");
+app.use("/api/context", contextRouter);
+
 // ═══════════════════════════════════════════
 //  404 — API routes only (static files handled by express.static)
 // ═══════════════════════════════════════════

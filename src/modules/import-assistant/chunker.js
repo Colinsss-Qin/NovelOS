@@ -42,6 +42,7 @@ const CHUNK_SIZE = 4000;
 const OVERLAP = 200;
 const MAX_RETRIES = 1;
 const TIMEOUT_MS = 30000;
+const TIMEOUT_MESSAGE = "AI 分析超时，请缩短文本或稍后重试";
 
 // ── Chunk text by paragraph boundaries ──
 function chunk(text, maxSize) {
@@ -74,9 +75,10 @@ async function analyzeChunk(chunkText, chunkIndex) {
   let lastError = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    let timeoutId = null;
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+      timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
       const result = await provider.generate({
         systemPrompt: SYSTEM_PROMPT,
@@ -84,23 +86,28 @@ async function analyzeChunk(chunkText, chunkIndex) {
           "【手稿片段 " + (chunkIndex + 1) + "】\n\n" + chunkText,
         temperature: 0.2,
         maxTokens: 4096,
+        signal: controller.signal,
       });
-
-      clearTimeout(timeoutId);
 
       const raw = result.content || "";
       const suggestions = _parseJSON(raw);
       return { chunkIndex, suggestions, raw };
     } catch (err) {
-      lastError = err;
+      lastError = _isAbortError(err) ? new Error(TIMEOUT_MESSAGE) : err;
       if (attempt < MAX_RETRIES) {
         // Wait before retry: 1s, then 2s
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
       }
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
   }
 
   return { chunkIndex, suggestions: [], raw: "", error: lastError?.message || "Unknown error" };
+}
+
+function _isAbortError(err) {
+  return err?.name === "AbortError" || err?.code === "ABORT_ERR";
 }
 
 // ── Parallel AI calls with concurrency limit ──

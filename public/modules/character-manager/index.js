@@ -7,7 +7,7 @@
 
 (function () {
   var state = {
-    projectId: "proj_demo",
+    projectId: null,
     view: "list",      // "list" | "detail" | "editor"
     subView: "list",   // "list" | "graph"
     characters: [],
@@ -29,7 +29,7 @@
       if (!container) { console.error("CharacterManager: container not found"); return; }
       container.innerHTML = '<div style="padding:40px;color:#d4a574;text-align:center"><p>👤 人物加载中…</p></div>';
 
-      state.projectId = projectId || "proj_demo";
+      state.projectId = projectId || null;
       _renderLayout();
       _initComponents();
       _loadCharacters();

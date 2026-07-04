@@ -10,9 +10,14 @@ datasource db {
 model Project {
   id          String   @id @default(cuid())
   name        String
+  subtitle    String   @default("")
   genre       String
   description String?
+  tags        String   @default("")
+  cover       String   @default("")
+  status      String   @default("筹备中")
   targetWords Int      @default(0)
+  currentWords Int     @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -38,12 +43,19 @@ model Character {
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name        String
   alias       String?
+  gender      String   @default("未知")
+  age         Int      @default(0)
+  birthday    String   @default("")
+  race        String   @default("人类")
+  occupation  String   @default("")
   role        String
   factionId   String?
   faction     Faction? @relation(fields: [factionId], references: [id])
   personality String
   appearance  String?
   background  String?
+  goal        String   @default("")
+  motivation  String   @default("")
   arc         String?
   abilities   String?
   notes       String?

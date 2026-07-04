@@ -6,7 +6,7 @@
 
 (function () {
   var state = {
-    projectId: "proj_demo",
+    projectId: null,
     currentStoryId: null,
     currentView: "tree",   // "tree" | "kanban" | "timeline"
     treeData: null,
@@ -28,7 +28,7 @@
       if (!container) { console.error("OutlineBoard: container not found"); return; }
       container.innerHTML = '<div style="padding:40px;color:#d4a574;text-align:center"><p>📋 大纲面板加载中…</p></div>';
 
-      state.projectId = projectId || "proj_demo";
+      state.projectId = projectId || null;
       _renderLayout();
       _initComponents();
       _loadStories();

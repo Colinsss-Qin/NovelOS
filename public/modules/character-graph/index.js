@@ -6,7 +6,7 @@
 
 (function () {
   var state = {
-    projectId: "proj_demo",
+    projectId: null,
     characters: [],
     relations: [],
     root: null,
@@ -23,7 +23,7 @@
       container = document.getElementById(containerId);
       if (!container) { console.error("CharacterGraph: container not found"); return; }
 
-      state.projectId = projectId || "proj_demo";
+      state.projectId = projectId || null;
 
       // Create React root
       if (!state.root) {

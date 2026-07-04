@@ -15,7 +15,7 @@ var BoardService = {
   _delete: function (url) { return fetch(url, { method: "DELETE" }).then(function (r) { return r.json(); }); },
 
   // Stories
-  listStories: function (pid) { return this._get(this.BASE + "/stories?projectId=" + encodeURIComponent(pid || "proj_demo")); },
+  listStories: function (pid) { return this._get(this.BASE + "/stories?projectId=" + encodeURIComponent(pid || "")); },
   createStory: function (d) { return this._post(this.BASE + "/stories", d); },
   getTree: function (id) { return this._get(this.BASE + "/stories/" + id + "/tree"); },
   getStats: function (id) { return this._get(this.BASE + "/stories/" + id + "/stats"); },

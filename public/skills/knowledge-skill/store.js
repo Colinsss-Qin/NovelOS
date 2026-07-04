@@ -283,6 +283,10 @@ function seedFromNovelData(novelData, projectId) {
  * @returns {Promise<{itemCount: number}>}
  */
 function loadFromApi(projectId) {
+  // Clear store before loading new project data
+  _store.items = {};
+  _store.index = {};
+
   return fetch("/api/items?projectId=" + encodeURIComponent(projectId) + "&limit=500")
     .then(function (r) { return r.json(); })
     .then(function (result) {

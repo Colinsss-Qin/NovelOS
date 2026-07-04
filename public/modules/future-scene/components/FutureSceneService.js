@@ -46,7 +46,7 @@ var FutureSceneService = {
 
   /** GET /api/future-scenes/entity-names?characterIds=a,b&locationIds=c&... */
   getEntityNames: function (projectId, charIds, locIds, facIds, chIds) {
-    var params = "projectId=" + encodeURIComponent(projectId || "proj_demo");
+    var params = "projectId=" + encodeURIComponent(projectId || "");
     if (charIds && charIds.length) params += "&characterIds=" + encodeURIComponent(charIds.join(","));
     if (locIds  && locIds.length)  params += "&locationIds="  + encodeURIComponent(locIds.join(","));
     if (facIds  && facIds.length)  params += "&factionIds="   + encodeURIComponent(facIds.join(","));

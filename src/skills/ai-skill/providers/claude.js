@@ -24,6 +24,7 @@ class ClaudeProvider {
           : undefined,
         messages: [{ role: "user", content: opts.userPrompt || opts.prompt }],
       }),
+      signal: opts.signal,
     });
 
     if (!res.ok) {
@@ -60,6 +61,7 @@ class ClaudeProvider {
         messages: [{ role: "user", content: opts.userPrompt || opts.prompt }],
         stream: true,
       }),
+      signal: opts.signal,
     });
 
     if (!res.ok) {

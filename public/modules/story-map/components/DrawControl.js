@@ -274,7 +274,8 @@ var DrawControl = {
           var feature = layer.feature;
           var name = (feature && feature.properties && feature.properties.name) || "未命名";
 
-          if (confirm('确定要删除 "' + name + '" 吗？')) {
+          NovelOSModal.confirm("删除确认", '确定要删除 "' + name + '" 吗？').then(function (ok) {
+            if (!ok) { self._setMode("view"); return; }
             // Find and remove the feature
             var features = GeoLayer._features;
             var idx = -1;
@@ -290,9 +291,8 @@ var DrawControl = {
               StoryMap.saveToStorage();
               LayoutSkill.showToast('已删除 "' + name + '"');
             }
-          }
-
-          self._setMode("view");
+            self._setMode("view");
+          });
         };
         layer.on("click", layer._smDeleteHandler);
       });
@@ -319,8 +319,9 @@ var DrawControl = {
 
   /** Create a GeoJSON feature + add to GeoLayer + save */
   _addFeature: function (geomType, coordinates, leafletLayer) {
+    var self = this;
     var type = this._getSelectedTerrainType();
-    var name = prompt("为这个地形命名：", this._getTerrainLabel().replace(/[^一-龥]/g, ""));
+    NovelOSModal.prompt("地形命名", "为这个地形命名", this._getTerrainLabel().replace(/[^一-龥]/g, "")).then(function (name) {
     if (!name || !name.trim()) return;
 
     var feature = {
@@ -339,18 +340,18 @@ var DrawControl = {
     GeoLayer.addFeature(feature);
 
     // Add click handler for the new layer to support future delete operations
-    var self = this;
     if (leafletLayer) {
       leafletLayer._smDeleteHandler = function () {
         if (self.mode === "delete") {
-          if (confirm('确定要删除 "' + name + '" 吗？')) {
+          NovelOSModal.confirm("删除确认", '确定要删除 "' + name + '" 吗？').then(function (ok) {
+            if (!ok) { self._setMode("view"); return; }
             GeoLayer.removeFeature(function (f) {
               return f.properties.name === name;
             });
             StoryMap.saveToStorage();
             LayoutSkill.showToast('已删除 "' + name + '"');
-          }
-          self._setMode("view");
+            self._setMode("view");
+          });
         }
       };
       leafletLayer.on("click", leafletLayer._smDeleteHandler);
@@ -358,5 +359,5 @@ var DrawControl = {
 
     StoryMap.saveToStorage();
     LayoutSkill.showToast('✅ 已添加 "' + name + '"');
-  },
+    });
 };

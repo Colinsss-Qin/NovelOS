@@ -246,3 +246,101 @@ body{
 
 /* ── Vol Title ── */
 .vol-title { flex: 1; }
+
+/* ───────────────────────────────────────────────
+   NovelOS Generic Modal — 统一弹窗组件
+   用于替代浏览器原生 prompt() / confirm()
+   ─────────────────────────────────────────────── */
+
+.novelos-modal-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex; align-items: center; justify-content: center;
+  animation: novelos-fade-in 0.15s ease;
+}
+
+@keyframes novelos-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.novelos-modal {
+  background: #1e1d30;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 360px;
+  max-width: 440px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: novelos-modal-in 0.15s ease;
+}
+
+@keyframes novelos-modal-in {
+  from { transform: translateY(-8px); opacity: 0.8; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.novelos-modal-title {
+  font-size: 15px; font-weight: 600; color: #d0cec8;
+  margin-bottom: 16px;
+}
+
+.novelos-modal-body {
+  margin-bottom: 20px;
+}
+
+.novelos-modal-message {
+  font-size: 13px; color: #8a8798; line-height: 1.6; margin: 0;
+}
+
+.novelos-modal-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #14131e;
+  color: #d0cec8;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+.novelos-modal-input:focus {
+  border-color: #d4a574;
+}
+.novelos-modal-input::placeholder {
+  color: #6b6880;
+}
+
+.novelos-modal-footer {
+  display: flex; gap: 8px; justify-content: flex-end;
+}
+
+.novelos-modal-btn {
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.novelos-modal-btn-cancel {
+  background: transparent;
+  border: 1px solid #333;
+  color: #8a8798;
+}
+.novelos-modal-btn-cancel:hover {
+  color: #d0cec8;
+  border-color: #555;
+}
+
+.novelos-modal-btn-primary {
+  background: #d4a574;
+  border: 1px solid #d4a574;
+  color: #0b0a12;
+  font-weight: 600;
+}
+.novelos-modal-btn-primary:hover {
+  background: #c09468;
+}

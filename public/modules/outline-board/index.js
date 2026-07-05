@@ -198,17 +198,19 @@
   }
 
   function _deleteEntity(type, id) {
-    if (!confirm("确定要删除吗？此操作不可撤销。")) return;
-    var deleteFn;
-    switch (type) {
-      case "volume": deleteFn = BoardService.deleteVolume; break;
-      case "chapter": deleteFn = BoardService.deleteChapter; break;
-      case "scene": deleteFn = BoardService.deleteScene; break;
-    }
-    if (!deleteFn) return;
-    deleteFn(id).then(function (r) {
-      if (r.success) { LayoutSkill.showToast("已删除"); _loadTree(); }
-      else LayoutSkill.showToast("删除失败: " + r.error);
+    NovelOSModal.confirm("删除确认", "确定要删除吗？此操作不可撤销。").then(function (ok) {
+      if (!ok) return;
+      var deleteFn;
+      switch (type) {
+        case "volume": deleteFn = BoardService.deleteVolume; break;
+        case "chapter": deleteFn = BoardService.deleteChapter; break;
+        case "scene": deleteFn = BoardService.deleteScene; break;
+      }
+      if (!deleteFn) return;
+      deleteFn(id).then(function (r) {
+        if (r.success) { LayoutSkill.showToast("已删除"); _loadTree(); }
+        else LayoutSkill.showToast("删除失败: " + r.error);
+      });
     });
   }
 

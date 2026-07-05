@@ -167,7 +167,8 @@ var GeoLayer = {
         layer.on("click", function () {
           if (typeof DrawControl !== "undefined") {
             if (DrawControl.mode === "delete") {
-              if (confirm('确定要删除 "' + name + '" 吗？')) {
+              NovelOSModal.confirm("删除确认", '确定要删除 "' + name + '" 吗？').then(function (ok) {
+                if (!ok) { DrawControl._setMode("view"); return; }
                 var features = self._features;
                 var idx = features.indexOf(feature);
                 if (idx >= 0) {
@@ -176,8 +177,8 @@ var GeoLayer = {
                   StoryMap.saveToStorage();
                   LayoutSkill.showToast('已删除 "' + name + '"');
                 }
-              }
-              DrawControl._setMode("view");
+                DrawControl._setMode("view");
+              });
               return;
             }
           }

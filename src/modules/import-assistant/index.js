@@ -109,6 +109,70 @@ router.post("/confirm", async (req, res, next) => {
   }
 });
 
+// ── Helpers: find existing entity by exact name ──
+
+async function _findExistingCharacter(projectId, name, baseUrl) {
+  try {
+    const resp = await fetch(baseUrl + "/api/characters?projectId=" + encodeURIComponent(projectId));
+    const result = await resp.json();
+    if (!result.success || !result.data) return null;
+    const normalized = name.trim();
+    return result.data.find(function (c) {
+      if (c.name.trim() === normalized) return true;
+      if (c.alias) {
+        return c.alias.split(/[,，、]/).some(function (a) { return a.trim() === normalized; });
+      }
+      return false;
+    }) || null;
+  } catch (_) { return null; }
+}
+
+async function _findExistingItem(projectId, type, name, baseUrl) {
+  try {
+    const resp = await fetch(
+      baseUrl + "/api/items?projectId=" + encodeURIComponent(projectId) +
+      "&type=" + encodeURIComponent(type) + "&limit=200"
+    );
+    const result = await resp.json();
+    if (!result.success || !result.data || !result.data.items) return null;
+    const normalized = name.trim();
+    return result.data.items.find(function (item) {
+      if (item.name.trim() === normalized) return true;
+      if (item.aliases) {
+        return item.aliases.split(",").some(function (a) { return a.trim() === normalized; });
+      }
+      return false;
+    }) || null;
+  } catch (_) { return null; }
+}
+
+function _mergeTags(existing, incoming) {
+  var existingList = existing
+    ? (Array.isArray(existing) ? existing : String(existing).split(",").map(function (s) { return s.trim(); }))
+    : [];
+  var incomingList = Array.isArray(incoming) ? incoming : [];
+  var merged = existingList.slice();
+  incomingList.forEach(function (t) {
+    if (t && merged.indexOf(t) === -1) merged.push(t);
+  });
+  return merged;
+}
+
+function _mergeAliases(existing, incoming) {
+  return _mergeTags(existing, incoming);
+}
+
+function _mergeText(existing, incoming) {
+  if (!incoming || !incoming.trim()) return existing || "";
+  if (!existing || !existing.trim()) return incoming.trim();
+  // If incoming is already contained in existing, keep existing
+  if (existing.indexOf(incoming.trim()) !== -1) return existing;
+  // If existing is shorter than 10 chars, just replace
+  if (existing.trim().length < 10) return incoming.trim();
+  // Otherwise append with separator
+  return existing.trim() + "\n\n---\n" + incoming.trim();
+}
+
 // ── Write to correct backend per type ──
 
 async function _createItem(projectId, item) {
@@ -122,6 +186,41 @@ async function _createItem(projectId, item) {
 
   // ── Character → POST /api/characters (Character Manager reads this) ──
   if (type === "character") {
+    const existing = await _findExistingCharacter(projectId, title, baseUrl);
+
+    if (existing) {
+      // Merge with existing character
+      const mergedAliases = _mergeAliases(
+        existing.alias ? existing.alias.split(/[,，、]/).map(function (s) { return s.trim(); }) : [],
+        [title].concat(aliases).filter(function (a) { return a && a !== existing.name; })
+      );
+      const mergedBackground = _mergeText(existing.background, description);
+      // Keep the longer personality
+      const newPersonality = description.slice(0, 200);
+      const mergedPersonality = (newPersonality.length > (existing.personality || "").length)
+        ? newPersonality : (existing.personality || "");
+
+      const putBody = {
+        background: mergedBackground,
+        personality: mergedPersonality,
+        alias: mergedAliases.length > 0 ? mergedAliases[0] : existing.alias,
+      };
+      // Only update appearance if new data has it
+      if (description.length > 200) {
+        putBody.appearance = description; // detailedDescription may contain appearance info
+      }
+
+      const resp = await fetch(baseUrl + "/api/characters/" + encodeURIComponent(existing.id), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(putBody),
+      });
+      const result = await resp.json();
+      if (!result.success) throw new Error(result.error || "更新角色失败");
+      return { id: result.data?.id, type, name: title, target: "character-manager", _action: "merged" };
+    }
+
+    // Create new
     const resp = await fetch(baseUrl + "/api/characters", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -135,11 +234,33 @@ async function _createItem(projectId, item) {
     });
     const result = await resp.json();
     if (!result.success) throw new Error(result.error || "创建角色失败");
-    return { id: result.data?.id, type, name: title, target: "character-manager" };
+    return { id: result.data?.id, type, name: title, target: "character-manager", _action: "created" };
   }
 
   // ── Location → POST /api/items (Story Bible reads this) ──
   if (type === "location") {
+    const existing = await _findExistingItem(projectId, "location", title, baseUrl);
+
+    if (existing) {
+      const mergedTags = _mergeTags(existing.tags, tags);
+      const mergedAliases = _mergeAliases(existing.aliases, aliases);
+      const mergedDesc = _mergeText(existing.description, description);
+
+      const resp = await fetch(baseUrl + "/api/items/" + encodeURIComponent(existing.id), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: mergedDesc,
+          tags: mergedTags,
+          aliases: mergedAliases,
+          attrs: { locationType: summary || "其他", description: mergedDesc, tags: mergedTags },
+        }),
+      });
+      const result = await resp.json();
+      if (!result.success) throw new Error(result.error || "更新地点失败");
+      return { id: result.data?.id, type, name: title, target: "story-bible", _action: "merged" };
+    }
+
     const resp = await fetch(baseUrl + "/api/items", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -152,11 +273,33 @@ async function _createItem(projectId, item) {
     });
     const result = await resp.json();
     if (!result.success) throw new Error(result.error || "创建地点失败");
-    return { id: result.data?.id, type, name: title, target: "story-bible", attrs: result.data?.attrs || {} };
+    return { id: result.data?.id, type, name: title, target: "story-bible", _action: "created" };
   }
 
   // ── Faction → POST /api/items ──
   if (type === "faction") {
+    const existing = await _findExistingItem(projectId, "faction", title, baseUrl);
+
+    if (existing) {
+      const mergedTags = _mergeTags(existing.tags, tags);
+      const mergedAliases = _mergeAliases(existing.aliases, aliases);
+      const mergedDesc = _mergeText(existing.description, description);
+
+      const resp = await fetch(baseUrl + "/api/items/" + encodeURIComponent(existing.id), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: mergedDesc,
+          tags: mergedTags,
+          aliases: mergedAliases,
+          attrs: { factionType: summary || "其他", description: mergedDesc, tags: mergedTags },
+        }),
+      });
+      const result = await resp.json();
+      if (!result.success) throw new Error(result.error || "更新势力失败");
+      return { id: result.data?.id, type, name: title, target: "story-bible", _action: "merged" };
+    }
+
     const resp = await fetch(baseUrl + "/api/items", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -169,17 +312,44 @@ async function _createItem(projectId, item) {
     });
     const result = await resp.json();
     if (!result.success) throw new Error(result.error || "创建势力失败");
-    return { id: result.data?.id, type, name: title, target: "story-bible", attrs: result.data?.attrs || {} };
+    return { id: result.data?.id, type, name: title, target: "story-bible", _action: "created" };
   }
 
   // ── Rule / Lore → POST /api/items ──
   if (type === "rule" || type === "lore") {
+    const dbType = type === "lore" ? "history_event" : "rule";
+    const existing = await _findExistingItem(projectId, dbType, title, baseUrl);
+
+    if (existing) {
+      const mergedTags = _mergeTags(existing.tags, tags);
+      const mergedAliases = _mergeAliases(existing.aliases, aliases);
+      const mergedDesc = _mergeText(existing.description, description);
+      const existingAttrs = typeof existing.attrs === "object" ? existing.attrs : {};
+
+      const resp = await fetch(baseUrl + "/api/items/" + encodeURIComponent(existing.id), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: mergedDesc,
+          tags: mergedTags,
+          aliases: mergedAliases,
+          attrs: Object.assign({}, existingAttrs, type === "rule"
+            ? { ruleCategory: summary || existingAttrs.ruleCategory || "其他" }
+            : { era: existingAttrs.era || "", isAutoExtracted: true }
+          ),
+        }),
+      });
+      const result = await resp.json();
+      if (!result.success) throw new Error(result.error || "更新设定失败");
+      return { id: result.data?.id, type, name: title, target: "story-bible", _action: "merged" };
+    }
+
     const resp = await fetch(baseUrl + "/api/items", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         projectId,
-        type: type === "lore" ? "history_event" : "rule",
+        type: dbType,
         name: title,
         summary: summary,
         description: description,
@@ -192,11 +362,30 @@ async function _createItem(projectId, item) {
     });
     const result = await resp.json();
     if (!result.success) throw new Error(result.error || "创建设定失败");
-    return { id: result.data?.id, type, name: title, target: "story-bible", attrs: result.data?.attrs || {} };
+    return { id: result.data?.id, type, name: title, target: "story-bible", _action: "created" };
   }
 
   // ── Note → POST /api/items (as reference) ──
   if (type === "note") {
+    const existing = await _findExistingItem(projectId, "reference", title, baseUrl);
+
+    if (existing) {
+      const mergedTags = _mergeTags(existing.tags, tags);
+      const mergedDesc = _mergeText(existing.description, description);
+
+      const resp = await fetch(baseUrl + "/api/items/" + encodeURIComponent(existing.id), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: mergedDesc,
+          tags: mergedTags,
+        }),
+      });
+      const result = await resp.json();
+      if (!result.success) throw new Error(result.error || "更新备注失败");
+      return { id: result.data?.id, type, name: title, target: "story-bible", _action: "merged" };
+    }
+
     const resp = await fetch(baseUrl + "/api/items", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -209,7 +398,7 @@ async function _createItem(projectId, item) {
     });
     const result = await resp.json();
     if (!result.success) throw new Error(result.error || "创建备注失败");
-    return { id: result.data?.id, type, name: title, target: "story-bible", attrs: {} };
+    return { id: result.data?.id, type, name: title, target: "story-bible", _action: "created" };
   }
 
   // ── Outline → POST /api/outline/volumes or chapters ──

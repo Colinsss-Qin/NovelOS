@@ -317,18 +317,19 @@
 
   function _onDeleteChar() {
     if (!state.activeChar) return;
-    if (!confirm("确定要删除「" + state.activeChar.name + "」吗？此操作不可撤销。")) return;
-
-    fetch("/api/characters/" + state.activeChar.id, { method: "DELETE" })
-      .then(function (r) { return r.json(); })
-      .then(function (result) {
-        if (!result.success) { LayoutSkill.showToast("删除失败: " + result.error); return; }
-        LayoutSkill.showToast("已删除");
-        state.activeChar = null;
-        state.view = "list";
-        CharDetail.showEmpty();
+    NovelOSModal.confirm("删除确认", "确定要删除「" + state.activeChar.name + "」吗？此操作不可撤销。").then(function (ok) {
+      if (!ok) return;
+      fetch("/api/characters/" + state.activeChar.id, { method: "DELETE" })
+        .then(function (r) { return r.json(); })
+        .then(function (result) {
+          if (!result.success) { LayoutSkill.showToast("删除失败: " + result.error); return; }
+          LayoutSkill.showToast("已删除");
+          state.activeChar = null;
+          state.view = "list";
+          CharDetail.showEmpty();
         _loadCharacters();
       });
+    });
   }
 
   function _onSaveChar(data) {

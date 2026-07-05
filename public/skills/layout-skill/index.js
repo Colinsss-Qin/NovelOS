@@ -192,9 +192,10 @@ var toastTimer;
       showToast("请先新建或选择项目");
       return;
     }
-    var title = prompt("请输入章节标题：", "新章节");
-    if (!title || !title.trim()) return;
-    createChapter(volumeId, title.trim());
+    NovelOSModal.prompt("新建章节", "请输入章节标题", "新章节").then(function (title) {
+      if (!title || !title.trim()) return;
+      createChapter(volumeId, title.trim());
+    });
   }
 
   function createChapter(volumeId, title) {
@@ -328,10 +329,12 @@ var toastTimer;
   }
 
   function promptCreateProject() {
-    var name = prompt("请输入项目名称：", "我的小说");
-    if (!name || !name.trim()) return;
-    var genre = prompt("请输入项目类型：", "未分类") || "未分类";
-    createProject(name.trim(), genre.trim());
+    NovelOSModal.prompt("新建项目", "请输入项目名称", "我的小说").then(function (name) {
+      if (!name || !name.trim()) return;
+      NovelOSModal.prompt("新建项目", "请输入项目类型", "未分类").then(function (genre) {
+        createProject(name.trim(), (genre || "未分类").trim());
+      });
+    });
   }
 
   function createProject(name, genre) {

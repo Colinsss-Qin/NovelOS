@@ -228,11 +228,12 @@
     var clearBtn = document.getElementById("sm-clear-btn");
     if (clearBtn) {
       clearBtn.addEventListener("click", function () {
-        if (confirm("确定要清除所有地图数据吗？此操作不可撤销。")) {
+        NovelOSModal.confirm("清除确认", "确定要清除所有地图数据吗？此操作不可撤销。").then(function (ok) {
+          if (!ok) return;
           GeoLayer.render({ type: "FeatureCollection", features: [] });
           StoryMap.saveToStorage();
           LayoutSkill.showToast("已清除");
-        }
+        });
       });
     }
   }

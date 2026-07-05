@@ -271,13 +271,14 @@ var FutureSceneEditor = {
     // Delete (edit only)
     if (isEdit) {
       document.getElementById("fs-editor-delete").addEventListener("click", function () {
-        if (confirm("确认删除场景「" + s.title + "」？此操作不可撤销。")) {
+        NovelOSModal.confirm("删除确认", "确认删除场景「" + s.title + "」？此操作不可撤销。").then(function (ok) {
+          if (!ok) return;
           self._closeOverlay();
           if (self._resolve) {
             self._resolve({ _delete: true });
             self._resolve = null;
           }
-        }
+        });
       });
     }
   },

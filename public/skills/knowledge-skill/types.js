@@ -13,7 +13,8 @@ var KnowledgeType = {
   TECHNIQUE:     "technique",
   RULE:          "rule",
   HISTORY_EVENT: "history_event",
-  TIMELINE_NODE: "timeline_node"
+  TIMELINE_NODE: "timeline_node",
+  PLOT_SKELETON: "plot_skeleton"
 };
 
 // Human-readable labels
@@ -27,7 +28,8 @@ var KnowledgeTypeLabel = {
   "technique":     "功法",
   "rule":          "规则体系",
   "history_event": "历史事件",
-  "timeline_node": "时间线节点"
+  "timeline_node": "时间线节点",
+  "plot_skeleton": "剧情骨架"
 };
 
 // ================================================================
@@ -158,6 +160,18 @@ ATTRS_SCHEMA.history_event = {
     isAutoExtracted:      { type: "boolean" }
   },
   defaults: { isAutoExtracted: false }
+};
+
+// ---- 剧情骨架 ----
+ATTRS_SCHEMA.plot_skeleton = {
+  required: [],
+  optional: {
+    chapterId:         { type: "string" },
+    protagonistName:   { type: "string" },
+    opponentName:      { type: "string" },
+    structuredData:    { type: "string" }
+  },
+  defaults: {}
 };
 
 // ---- 时间线节点 ----

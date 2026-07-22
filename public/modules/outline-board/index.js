@@ -2,15 +2,15 @@
    Outline Board Module — 大纲面板
    Tree · Kanban · Timeline 三视图 + 拖拽排序 + 快速创建
    Exposed as window.OutlineBoard
+
+   MIGRATED: Story 层已移除，直接使用 Project 作为顶层实体
    ================================================================ */
 
 (function () {
   var state = {
     projectId: null,
-    currentStoryId: null,
     currentView: "tree",   // "tree" | "kanban" | "timeline"
     treeData: null,
-    stories: [],
     charNames: {},         // id → name (from Character Skill)
     locNames: {},          // id → name (from World Skill)
     facNames: {},          // id → name (from World Skill)
@@ -31,7 +31,7 @@
       state.projectId = projectId || null;
       _renderLayout();
       _initComponents();
-      _loadStories();
+      _loadTree();
     } catch (e) {
       console.error("OutlineBoard init error:", e.message);
       container.innerHTML = '<div style="padding:40px;color:#c06060"><h3>大纲面板初始化错误</h3><pre>' + e.message + "</pre></div>";
@@ -51,7 +51,7 @@
       '<button class="ob-view-tab" data-view="kanban">📋 看板</button>' +
       '<button class="ob-view-tab" data-view="timeline">📅 时间线</button>' +
       "</div>" +
-      '<select class="ob-story-select" id="ob-story-select"></select>' +
+      '<span class="ob-project-label" id="ob-project-label">📖 大纲</span>' +
       '<button class="ob-quick-create" id="ob-quick-create-btn">+ 快速创建</button>' +
       "</div>" +
       '<div class="ob-content" id="ob-content-area"></div>' +
@@ -72,7 +72,6 @@
   // ═══════════════════════════════════
 
   function _bindTopbar() {
-    var self = this;
     // View tabs
     document.querySelector(".ob-view-tabs").addEventListener("click", function (e) {
       var tab = e.target.closest(".ob-view-tab");
@@ -83,22 +82,12 @@
       _renderCurrentView();
     });
 
-    // Story select
-    var sel = document.getElementById("ob-story-select");
-    if (sel) {
-      sel.addEventListener("change", function () {
-        state.currentStoryId = this.value;
-        if (state.currentStoryId) _loadTree();
-        else _showEmpty("请创建一个故事开始");
-      });
-    }
-
     // Quick create
     var qcBtn = document.getElementById("ob-quick-create-btn");
     if (qcBtn) {
       qcBtn.addEventListener("click", function () {
-        if (!state.currentStoryId) { LayoutSkill.showToast("请先创建一个故事"); return; }
-        _openQuickCreate("volume", { storyId: state.currentStoryId });
+        if (!state.projectId) { LayoutSkill.showToast("请先选择项目"); return; }
+        _openQuickCreate("volume", { storyId: state.projectId });
       });
     }
   }
@@ -107,38 +96,42 @@
   //  DATA LOADING
   // ═══════════════════════════════════
 
-  function _loadStories() {
-    BoardService.listStories(state.projectId).then(function (result) {
-      if (!result.success) { _showEmpty("加载失败: " + result.error); return; }
-      state.stories = result.data || [];
-
-      var sel = document.getElementById("ob-story-select");
-      if (sel) {
-        if (state.stories.length === 0) {
-          sel.innerHTML = '<option value="">-- 无故事，请先创建 --</option>';
-          _showEmpty("还没有故事<br><small>点击「+ 快速创建」创建第一卷</small>");
-        } else {
-          sel.innerHTML = state.stories.map(function (s) {
-            return '<option value="' + s.id + '">' + _esc(s.title) + '</option>';
-          }).join("");
-          state.currentStoryId = state.stories[0].id;
-          _loadTree();
-        }
-      }
-    });
-  }
-
   function _loadTree() {
-    if (!state.currentStoryId) return;
-    BoardService.getTree(state.currentStoryId).then(function (result) {
-      if (!result.success) { _showEmpty("加载大纲失败"); return; }
+    if (!state.projectId) {
+      _showEmpty("请先在顶部选择一个项目");
+      return;
+    }
+
+    // 项目名称显示
+    var label = document.getElementById("ob-project-label");
+    if (label) {
+      var project = (typeof LayoutSkill !== "undefined" && LayoutSkill.getState)
+        ? LayoutSkill.getState().activeProject
+        : null;
+      label.textContent = "📖 " + (project ? (project.name || project.title || "大纲") : "大纲");
+    }
+
+    // 直接用 projectId 作为 storyId 加载树
+    BoardService.getTree(state.projectId).then(function (result) {
+      if (!result.success) {
+        // 如果是新项目还没有数据（404 可能是因为没有 Volume），静默处理
+        if (result.error && result.error.indexOf("不存在") !== -1) {
+          _showEmpty("项目还没有大纲<br><small>点击「+ 快速创建」开始</small>");
+          return;
+        }
+        _showEmpty("加载大纲失败: " + (result.error || "未知错误"));
+        return;
+      }
       state.treeData = result.data;
-      _loadEntityNames(); // Load character/location/faction names in background
+      _loadEntityNames();
       _renderCurrentView();
+    }).catch(function () {
+      _showEmpty("加载大纲失败");
     });
   }
 
   function _loadEntityNames() {
+    if (!state.projectId) return;
     // Load character names
     fetch("/api/characters?projectId=" + state.projectId + "&limit=500")
       .then(function (r) { return r.json(); })
@@ -192,7 +185,7 @@
       if (!createFn) return;
       createFn(result.data).then(function (r) {
         if (r.success) { LayoutSkill.showToast("已创建"); _loadTree(); }
-        else LayoutSkill.showToast("创建失败: " + r.error);
+        else LayoutSkill.showToast("创建失败: " + (r.error || "未知错误"));
       });
     });
   }
@@ -209,14 +202,14 @@
       if (!deleteFn) return;
       deleteFn(id).then(function (r) {
         if (r.success) { LayoutSkill.showToast("已删除"); _loadTree(); }
-        else LayoutSkill.showToast("删除失败: " + r.error);
+        else LayoutSkill.showToast("删除失败: " + (r.error || "未知错误"));
       });
     });
   }
 
   function _onDragDrop(dragData, targetId, targetType) {
     // Determine reorder endpoint based on drag type
-    var reorderFn, listFn, parentField;
+    var reorderFn;
     if (dragData.type === "volume") {
       reorderFn = function (id, order) { return fetch("/api/outline/volumes/" + id + "/reorder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ newOrder: order }) }).then(function (r) { return r.json(); }); };
     } else if (dragData.type === "chapter") {
@@ -228,17 +221,20 @@
 
     // Find target order
     var targetOrder = 0;
-    if (targetType === "volume") {
-      var vols = state.treeData.volumes || [];
-      targetOrder = vols.findIndex(function (v) { return v.id === targetId; });
-    }
-
     var parentId;
+    if (dragData.type === "volume" || targetType === "volume") {
+      var vols = state.treeData.volumes || [];
+      if (dragData.type === "volume") {
+        targetOrder = vols.findIndex(function (v) {
+          var vid = v.volume ? v.volume.id : v.id;
+          return vid === targetId;
+        });
+      }
+    }
     if (dragData.type === "chapter") {
-      // Find which volume the target chapter is in
       (state.treeData.volumes || []).forEach(function (vol) {
         (vol.chapters || []).forEach(function (ch, i) {
-          if (ch.id === targetId) { parentId = vol.id; targetOrder = i; }
+          if (ch.id === targetId) { parentId = vol.volume ? vol.volume.id : vol.id; targetOrder = i; }
         });
       });
     }
@@ -254,7 +250,7 @@
 
     reorderFn(dragData.id, targetOrder, parentId).then(function (r) {
       if (r.success) { LayoutSkill.showToast("已排序"); _loadTree(); }
-      else LayoutSkill.showToast("排序失败: " + r.error);
+      else LayoutSkill.showToast("排序失败: " + (r.error || "未知错误"));
     });
   }
 
@@ -271,7 +267,7 @@
 
   window.OutlineBoard = {
     init: init,
-    refresh: function () { _loadStories(); },
+    refresh: function () { _loadTree(); },
     _openQuickCreate: _openQuickCreate,
     _deleteEntity: _deleteEntity,
     getState: function () { return state; },

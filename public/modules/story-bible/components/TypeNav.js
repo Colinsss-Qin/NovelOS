@@ -68,7 +68,8 @@ function _typeIcon(type) {
   var map = {
     "character": "👤", "faction": "🏛️", "nation": "👑", "sect": "🏰",
     "location": "📍", "artifact": "⚔️", "technique": "📖",
-    "rule": "📜", "history_event": "📅", "timeline_node": "⏳"
+    "rule": "📜", "history_event": "📅", "timeline_node": "⏳",
+    "plot_skeleton": "🎯"
   };
   return map[type] || "📄";
 }

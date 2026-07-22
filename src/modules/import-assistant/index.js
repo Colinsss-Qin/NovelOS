@@ -21,17 +21,31 @@ function _requireApiKey() {
 // ── POST /api/import/analyze ──
 router.post("/analyze", async (req, res, next) => {
   try {
-    const { projectId, content, fileName } = req.body;
+    const { projectId, content, fileName, files } = req.body;
 
     if (!projectId)
       return res.status(400).json({ success: false, error: "projectId is required" });
-    if (!content || !content.trim())
+
+    // 多文件模式：合并所有文件内容带分隔标记
+    let finalContent = content;
+    let finalFileName = fileName || "未命名文档";
+    let fileCount = 1;
+
+    if (files && Array.isArray(files) && files.length > 1) {
+      finalContent = files.map(function (f) {
+        return "\n\n=== 文档：" + (f.fileName || "未命名") + " ===\n\n" + (f.content || "");
+      }).join("");
+      finalFileName = files.length + " 个文件";
+      fileCount = files.length;
+    }
+
+    if (!finalContent || !finalContent.trim())
       return res.status(400).json({ success: false, error: "content is required" });
 
     _requireApiKey();
 
     // 1. Chunk
-    const chunks = chunk(content, 4000);
+    const chunks = chunk(finalContent, 4000);
 
     // 2. Analyze each chunk via Kimi (max 3 concurrent)
     const chunkResults = await analyzeChunks(chunks);
@@ -46,13 +60,14 @@ router.post("/analyze", async (req, res, next) => {
     }
 
     // 4. Merge + dedup + conflict detection
-    const suggestions = merge(chunkResults);
+    const suggestions = merge(chunkResults, fileCount);
     const counts = countByType(suggestions);
 
     res.json({
       success: true,
       data: {
-        sourceFile: fileName || "未命名文档",
+        sourceFile: finalFileName,
+        fileCount: fileCount,
         totalCount: suggestions.length,
         chunkCount: chunks.length,
         chunkErrors: totalErrors,
@@ -188,6 +203,11 @@ async function _createItem(projectId, item) {
   if (type === "character") {
     const existing = await _findExistingCharacter(projectId, title, baseUrl);
 
+    // 从 AI 提取的 payload 中读取新字段
+    const speakingStyle = item.payload?.speakingStyle || "";
+    const behaviorLogic = item.payload?.behaviorLogic || "";
+    const forbidden = item.payload?.forbidden || "";
+
     if (existing) {
       // Merge with existing character
       const mergedAliases = _mergeAliases(
@@ -195,7 +215,6 @@ async function _createItem(projectId, item) {
         [title].concat(aliases).filter(function (a) { return a && a !== existing.name; })
       );
       const mergedBackground = _mergeText(existing.background, description);
-      // Keep the longer personality
       const newPersonality = description.slice(0, 200);
       const mergedPersonality = (newPersonality.length > (existing.personality || "").length)
         ? newPersonality : (existing.personality || "");
@@ -205,10 +224,13 @@ async function _createItem(projectId, item) {
         personality: mergedPersonality,
         alias: mergedAliases.length > 0 ? mergedAliases[0] : existing.alias,
       };
-      // Only update appearance if new data has it
       if (description.length > 200) {
-        putBody.appearance = description; // detailedDescription may contain appearance info
+        putBody.appearance = description;
       }
+      // 新字段：仅当 AI 提取到内容时才覆盖
+      if (speakingStyle) putBody.speakingStyle = _mergeText(existing.speakingStyle, speakingStyle);
+      if (behaviorLogic) putBody.behaviorLogic = _mergeText(existing.behaviorLogic, behaviorLogic);
+      if (forbidden) putBody.forbidden = _mergeText(existing.forbidden, forbidden);
 
       const resp = await fetch(baseUrl + "/api/characters/" + encodeURIComponent(existing.id), {
         method: "PUT",
@@ -230,6 +252,9 @@ async function _createItem(projectId, item) {
         alias: aliases.length > 0 ? aliases[0] : "",
         personality: description.slice(0, 200),
         background: description,
+        speakingStyle: speakingStyle,
+        behaviorLogic: behaviorLogic,
+        forbidden: forbidden,
       }),
     });
     const result = await resp.json();

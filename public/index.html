@@ -50,12 +50,14 @@
     <div class="editor-toolbar">
       <span class="ch-title" id="ch-title">选择章节开始写作</span>
       <span class="ch-meta" id="ch-meta"></span>
+	      <button class="save-btn" id="save-btn" onclick="LayoutSkill.saveChapter()" title="保存 (Ctrl+S)">💾 保存</button>
 	      <span class="save-indicator" id="save-indicator"></span>
     </div>
     <div class="ai-actions">
       <button class="ai-btn primary" onclick="AIActions.generateChapter()">✨ 生成本章</button>
       <button class="ai-btn" onclick="AIActions.continueChapter()">→ 续写</button>
-                      </div>
+      <button class="ai-btn" id="finalize-btn" onclick="AIActions.finalizeChapter()" title="定稿后自动生成摘要并扫描新设定">✅ 定稿</button>
+    </div>
     <div id="editor-area">
       <div class="empty-state" id="empty-state">
         <span class="icon">✍️</span>
@@ -188,6 +190,11 @@
 <script src="/modules/future-scene/index.js"></script>
 
 <!-- ============================================================ -->
+<!--  PLOT DESIGNER MODULE                                         -->
+<!-- ============================================================ -->
+<script src="/modules/plot-designer/index.js"></script>
+
+<!-- ============================================================ -->
 <!--  STORY BIBLE MODULE                                           -->
 <!-- ============================================================ -->
 <script>
@@ -255,7 +262,7 @@ var AIActions = (function () {
       body: JSON.stringify({
         task: task,
         userPrompt: promptText,
-        maxTokens: 4096
+        maxTokens: 6000
       })
     }).then(function (response) {
       if (!response.ok) throw new Error("HTTP " + response.status);
@@ -404,7 +411,7 @@ var AIActions = (function () {
     fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ task: task, userPrompt: promptText, maxTokens: 4096 })
+      body: JSON.stringify({ task: task, userPrompt: promptText, maxTokens: 6000 })
     }).then(function (response) {
       if (!response.ok) throw new Error("HTTP " + response.status);
 
@@ -597,9 +604,99 @@ var AIActions = (function () {
     return window.LayoutSkill && LayoutSkill.getState ? LayoutSkill.getState().activeProject : null;
   }
 
+  /**
+   * 在右侧面板展示本次生成使用的上下文条目
+   */
+  function showGenContext(usedItems) {
+    var container = document.getElementById("right-content");
+    if (!container) return;
+
+    var html = '<div class="section"><div class="section-title">🤖 本次生成使用了</div>';
+
+    // 人物
+    html += '<div class="ctx-group">';
+    html += '<div class="ctx-group-icon">👤</div><div class="ctx-group-label">人物</div>';
+    if (usedItems.characters && usedItems.characters.length > 0) {
+      html += '<div class="ctx-group-items">' + usedItems.characters.map(function (name) {
+        return '<span class="ctx-tag ctx-tag-char" onclick="AIActions._jumpToBible(\'character\',\'' + escAttr(name) + '\')" title="跳转到人物">' + escHtml(name) + '</span>';
+      }).join("") + '</div>';
+    } else {
+      html += '<span class="ctx-none">无</span>';
+    }
+    html += '</div>';
+
+    // 地点
+    html += '<div class="ctx-group">';
+    html += '<div class="ctx-group-icon">📍</div><div class="ctx-group-label">地点</div>';
+    if (usedItems.locations && usedItems.locations.length > 0) {
+      html += '<div class="ctx-group-items">' + usedItems.locations.map(function (name) {
+        return '<span class="ctx-tag ctx-tag-loc" onclick="AIActions._jumpToBible(\'location\',\'' + escAttr(name) + '\')" title="跳转到地点">' + escHtml(name) + '</span>';
+      }).join("") + '</div>';
+    } else {
+      html += '<span class="ctx-none">无</span>';
+    }
+    html += '</div>';
+
+    // 势力
+    html += '<div class="ctx-group">';
+    html += '<div class="ctx-group-icon">🏛</div><div class="ctx-group-label">势力</div>';
+    if (usedItems.factions && usedItems.factions.length > 0) {
+      html += '<div class="ctx-group-items">' + usedItems.factions.map(function (name) {
+        return '<span class="ctx-tag ctx-tag-fac" onclick="AIActions._jumpToBible(\'faction\',\'' + escAttr(name) + '\')" title="跳转到势力">' + escHtml(name) + '</span>';
+      }).join("") + '</div>';
+    } else {
+      html += '<span class="ctx-none">无</span>';
+    }
+    html += '</div>';
+
+    // 规则
+    html += '<div class="ctx-group">';
+    html += '<div class="ctx-group-icon">📜</div><div class="ctx-group-label">规则</div>';
+    if (usedItems.rules && usedItems.rules.length > 0) {
+      html += '<div class="ctx-group-items">' + usedItems.rules.map(function (name) {
+        return '<span class="ctx-tag ctx-tag-rule">' + escHtml(name) + '</span>';
+      }).join("") + '</div>';
+    } else {
+      html += '<span class="ctx-none">无</span>';
+    }
+    html += '</div>';
+
+    // 前情
+    html += '<div class="ctx-group">';
+    html += '<div class="ctx-group-icon">📖</div><div class="ctx-group-label">前情</div>';
+    html += '<span class="ctx-value">' + escHtml(usedItems.prevChapter || "无") + '</span>';
+    html += '</div>';
+
+    // 伏笔
+    html += '<div class="ctx-group">';
+    html += '<div class="ctx-group-icon">🎯</div><div class="ctx-group-label">伏笔</div>';
+    if (usedItems.futureScenes && usedItems.futureScenes.length > 0) {
+      html += '<div class="ctx-group-items">' + usedItems.futureScenes.map(function (name) {
+        return '<span class="ctx-tag ctx-tag-fore">' + escHtml(name) + '</span>';
+      }).join("") + '</div>';
+    } else {
+      html += '<span class="ctx-none">无</span>';
+    }
+    html += '</div>';
+
+    html += '</div>'; // .section
+    container.innerHTML = html;
+  }
+
+  function escHtml(s) {
+    if (!s) return "";
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function escAttr(s) {
+    if (!s) return "";
+    return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
   function streamGenerate(task, promptText) {
     var ed = editor();
     var chapter = activeChapter();
+    var project = activeProject();
     if (!ed || !chapter) {
       toast("请先新建并选择章节");
       return;
@@ -607,6 +704,7 @@ var AIActions = (function () {
 
     var hadError = false;
     var result = "";
+    var genUsedItems = null;
     ed.disabled = true;
     setGenerateButton(true);
     toast("AI 生成中...");
@@ -614,7 +712,16 @@ var AIActions = (function () {
     fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ task: task, userPrompt: promptText, maxTokens: 4096 })
+      body: JSON.stringify({
+        task: task,
+        userPrompt: promptText,
+        chapterId: chapter.id,
+        projectId: project ? project.id : null,
+        chapterTitle: chapter.title || "",
+        chapterSummary: chapter.summary || "",
+        projectGenre: project ? (project.genre || "") : "",
+        maxTokens: 6000
+      })
     }).then(function (response) {
       if (!response.ok) {
         return response.json().catch(function () { return {}; }).then(function (json) {
@@ -648,6 +755,9 @@ var AIActions = (function () {
                 ed.value = result;
                 ed.scrollTop = ed.scrollHeight;
               }
+              if (json.done) {
+                genUsedItems = json.usedItems || null;
+              }
             } catch (e) {}
           });
 
@@ -664,6 +774,10 @@ var AIActions = (function () {
         toast("AI 未返回内容");
         return;
       }
+      // 展示上下文
+      if (genUsedItems) {
+        showGenContext(genUsedItems);
+      }
       toast("生成完成，正在保存...");
       if (window.LayoutSkill && LayoutSkill.saveChapter) {
         LayoutSkill.saveChapter().then(function () { toast("生成内容已保存"); });
@@ -677,44 +791,202 @@ var AIActions = (function () {
 
   function buildChapterPrompt(prefix) {
     var chapter = activeChapter();
-    var project = activeProject();
     var ed = editor();
-    var parts = [prefix || "请根据以下信息生成一章完整小说正文。", ""];
-    if (project) {
-      parts.push("作品：" + (project.name || project.title || ""));
-      parts.push("类型：" + (project.genre || ""));
-    }
-    if (chapter) {
-      parts.push("章节标题：" + (chapter.title || ""));
-      if (chapter.summary) parts.push("章节摘要：" + chapter.summary);
-    }
+    var lines = [prefix || "请根据以上设定生成章节正文。"];
     if (ed && ed.value.trim()) {
-      parts.push("");
-      parts.push("当前正文：");
-      parts.push(ed.value.slice(-1200));
+      lines.push("");
+      lines.push("【当前已有正文（请从结尾自然续写）】");
+      lines.push(ed.value.slice(-1200));
     }
-    parts.push("");
-    parts.push("要求：只输出小说正文，不要输出解释说明。");
-    return parts.join("\n");
+    return lines.join("\n");
+  }
+
+  /** 跳转到故事圣经对应类型条目 */
+  function jumpToBible(expectedType, name) {
+    if (window.LayoutSkill && LayoutSkill.switchTab) {
+      LayoutSkill.switchTab("bible");
+    }
+    // 延迟等 bible DOM 渲染完成后设置搜索
+    setTimeout(function () {
+      if (window.StoryBible && typeof StoryBible.search === "function") {
+        StoryBible.search(name, expectedType);
+      }
+    }, 600);
+  }
+
+  /** 定稿章节：生成 autoSummary + 扫描新设定 */
+  function finalizeChapter() {
+    var chapter = activeChapter();
+    var project = activeProject();
+    if (!chapter || !project) {
+      toast("请先选择章节和项目");
+      return;
+    }
+    var ed = editor();
+    if (!ed || !ed.value.trim()) {
+      toast("章节无正文内容，无法定稿");
+      return;
+    }
+
+    var btn = document.getElementById("finalize-btn");
+    if (btn) { btn.disabled = true; btn.textContent = "⏳ 定稿中..."; }
+    toast("正在生成摘要并扫描新设定...");
+
+    fetch("/api/projects/" + encodeURIComponent(project.id) + "/chapters/" + encodeURIComponent(chapter.id) + "/finalize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (result) {
+      if (btn) { btn.disabled = false; btn.textContent = "✅ 定稿"; }
+      if (!result.success) {
+        toast("定稿失败: " + (result.error || "未知错误"));
+        return;
+      }
+
+      var data = result.data || {};
+      var hasSummary = data.autoSummary ? true : false;
+      var sugCount = data.suggestions ? data.suggestions.length : 0;
+
+      // 更新本地章节缓存
+      if (chapter) { chapter.status = "finalized"; }
+
+      // 更新 meta 显示
+      var metaEl = document.getElementById("ch-meta");
+      if (metaEl) {
+        var wc = chapter.wordCount || 0;
+        metaEl.textContent = wc.toLocaleString() + " 字 · 已定稿";
+      }
+
+      // 展示结果
+      if (sugCount > 0) {
+        showSuggestions(data.suggestions, project.id, chapter.id);
+        toast("✅ 定稿完成 — 摘要已生成，发现 " + sugCount + " 条新设定");
+      } else {
+        showSuggestions([], project.id, chapter.id);
+        toast("✅ 定稿完成 — 摘要已生成，未发现新设定");
+      }
+    })
+    .catch(function (err) {
+      if (btn) { btn.disabled = false; btn.textContent = "✅ 定稿"; }
+      toast("定稿请求失败: " + err.message);
+    });
+  }
+
+  /** 在右侧面板展示定稿结果：摘要状态 + 新设定建议 */
+  function showSuggestions(suggestions, projectId, chapterId) {
+    var container = document.getElementById("right-content");
+    if (!container) return;
+
+    var html = '<div class="section"><div class="section-title">✅ 定稿完成</div>';
+
+    // 摘要状态
+    html += '<div style="font-size:13px;color:#5aab8a;margin-bottom:12px">📝 本章摘要已自动生成</div>';
+
+    // 建议列表
+    if (suggestions && suggestions.length > 0) {
+      html += '<div style="font-size:11px;color:#d4a574;margin-bottom:10px">📌 发现 ' + suggestions.length + ' 条新设定，点击加入故事圣经：</div>';
+
+      for (var i = 0; i < suggestions.length; i++) {
+        var s = suggestions[i];
+        var typeLabel = { character: "👤人物", location: "📍地点", faction: "🏛势力", rule: "📜规则" }[s.type] || s.type;
+        html +=
+          '<div class="suggestion-card" id="sug-' + i + '">' +
+          '<div class="sug-header">' +
+          '<span class="sug-type">' + typeLabel + '</span>' +
+          '<span class="sug-name">' + escHtml(s.name) + '</span>' +
+          '</div>' +
+          '<div class="sug-content">' + escHtml(s.content) + '</div>' +
+          '<div class="sug-reason">💡 ' + escHtml(s.reason || "") + '</div>' +
+          '<div class="sug-actions">' +
+          '<button class="sug-add-btn" id="sug-add-' + i + '" onclick="AIActions._addToBible(\'' + i + '\')">➕ 加入故事圣经</button>' +
+          '<span class="sug-status" id="sug-status-' + i + '" style="display:none"></span>' +
+          '</div>' +
+          '</div>';
+      }
+    } else {
+      html += '<div style="font-size:12px;color:#6b6880">未发现需要新增的设定条目。</div>';
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+
+    // 缓存 suggestions 数据以便回调使用
+    container._suggestions = suggestions;
+    container._sugProjectId = projectId;
+  }
+
+  /** 将一条建议加入故事圣经 */
+  function addToBible(index) {
+    var container = document.getElementById("right-content");
+    if (!container || !container._suggestions) return;
+    var suggestions = container._suggestions;
+    var projectId = container._sugProjectId;
+    var s = suggestions[index];
+    if (!s) return;
+
+    var addBtn = document.getElementById("sug-add-" + index);
+    var statusEl = document.getElementById("sug-status-" + index);
+    if (addBtn) { addBtn.disabled = true; addBtn.textContent = "⏳ 正在添加..."; }
+
+    // 构建带默认值的 attrs，character 类型补充 personality
+    var attrs = KnowledgeSkill.buildAttrs(s.type, {});
+    if (s.type === 'character' && !attrs.personality) {
+      attrs.personality = '待补充';
+    }
+
+    KnowledgeSkill.create({
+      projectId: projectId,
+      type: s.type,
+      name: s.name,
+      summary: s.content || "",
+      description: s.content || "",
+      tags: ["AI提取"],
+      attrs: attrs
+    }).then(function (result) {
+      if (result.success) {
+        if (addBtn) { addBtn.style.display = "none"; }
+        if (statusEl) { statusEl.style.display = "inline"; statusEl.textContent = "✅ 已加入"; statusEl.style.color = "#5aab8a"; }
+        toast("已加入故事圣经：" + s.name);
+        // 刷新故事圣经
+        if (window.StoryBible && StoryBible.refresh) {
+          StoryBible.refresh();
+        }
+      } else {
+        if (addBtn) { addBtn.disabled = false; addBtn.textContent = "➕ 加入故事圣经"; }
+        toast("添加失败：" + (result.error || "未知错误"));
+      }
+    }).catch(function (err) {
+      if (addBtn) { addBtn.disabled = false; addBtn.textContent = "➕ 加入故事圣经"; }
+      toast("请求失败：" + err.message);
+    });
   }
 
   return {
-    generateChapter: function () {
-      if (!activeChapter()) {
-        toast("请先新建并选择章节");
-        return;
-      }
-      streamGenerate("chapter_generate", buildChapterPrompt("请生成本章正文。"));
-    },
-    continueChapter: function () {
-      var ed = editor();
-      if (!activeChapter() || !ed || !ed.value.trim()) {
-        toast("请先选择章节并输入一些内容");
-        return;
-      }
-      streamGenerate("chapter_continue", buildChapterPrompt("请从当前正文结尾自然续写。"));
-    }
+    generateChapter: generateChapter,
+    continueChapter: continueChapter,
+    finalizeChapter: finalizeChapter,
+    _jumpToBible: jumpToBible,
+    _addToBible: addToBible
   };
+
+  function generateChapter() {
+    if (!activeChapter()) {
+      toast("请先新建并选择章节");
+      return;
+    }
+    // 不传 userPrompt，由后端 buildUserPrompt 用 summary 模板生成
+    streamGenerate("chapter_generate", "");
+  }
+
+  function continueChapter() {
+    var ed = editor();
+    if (!activeChapter() || !ed || !ed.value.trim()) {
+      toast("请先选择章节并输入一些内容");
+      return;
+    }
+    streamGenerate("chapter_continue", buildChapterPrompt("请从当前正文结尾自然续写。"));
+  }
 })();
 
 LayoutSkill.init();

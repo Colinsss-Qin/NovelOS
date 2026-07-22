@@ -33,7 +33,7 @@
     counts: {},
     sourceFile: "",
     confirmResult: null,
-    _selectedFile: null,
+    _files: [],           // [{name, size, content}] 多文件累积
   };
 
   var _escHandler = null;
@@ -92,12 +92,13 @@
       '<div class="ia-dropzone" id="ia-dropzone">' +
       '<div class="ia-dropzone-icon">📂</div>' +
       '<div class="ia-dropzone-text">点击选择文件，或将文件拖放到此处</div>' +
-      '<div class="ia-dropzone-hint">支持 .txt 和 .md 格式，最大 5MB</div>' +
-      '<input type="file" id="ia-file-input" accept=".txt,.md" style="display:none">' +
-      '</div><div id="ia-file-info" style="display:none" class="ia-file-info"></div>'
+      '<div class="ia-dropzone-hint">支持 .txt 和 .md 格式，可多选或多次添加，最大 5MB/个</div>' +
+      '<input type="file" id="ia-file-input" accept=".txt,.md" multiple style="display:none">' +
+      '</div><div id="ia-file-list" style="display:none" class="ia-file-list"></div>'
     );
     _renderFooter(null);
     _wireUpload();
+    _renderFileList();
   }
 
   function _wireUpload() {
@@ -108,46 +109,92 @@
     dz.addEventListener("dragleave", function () { dz.classList.remove("ia-dropzone-hover"); });
     dz.addEventListener("drop", function (e) {
       e.preventDefault(); dz.classList.remove("ia-dropzone-hover");
-      if (e.dataTransfer.files.length) _handleFile(e.dataTransfer.files[0]);
+      if (e.dataTransfer.files.length) _addFiles(e.dataTransfer.files);
     });
-    fi.addEventListener("change", function () { if (fi.files.length) _handleFile(fi.files[0]); });
+    fi.addEventListener("change", function () { if (fi.files.length) _addFiles(fi.files); });
   }
 
-  function _handleFile(file) {
-    var ext = file.name.split(".").pop().toLowerCase();
-    if (ext !== "txt" && ext !== "md") { _toast("仅支持 .txt 和 .md 文件"); return; }
-    if (file.size > 5 * 1024 * 1024) { _toast("文件过大，请选择 5MB 以内的文件"); return; }
+  function _addFiles(fileList) {
+    var added = 0;
+    for (var i = 0; i < fileList.length; i++) {
+      var f = fileList[i];
+      var ext = f.name.split(".").pop().toLowerCase();
+      if (ext !== "txt" && ext !== "md") continue;
+      if (f.size > 5 * 1024 * 1024) { _toast(f.name + " 超过 5MB 限制，已跳过"); continue; }
+      // 去重：不添加同名文件
+      if (state._files.some(function (x) { return x.name === f.name && x.size === f.size; })) continue;
+      state._files.push({ name: f.name, size: f.size, content: null, file: f });
+      added++;
+    }
+    if (added) { _renderFileList(); _toast("已添加 " + added + " 个文件"); }
+    // 清除 input 以便重新选择同一文件
+    var fi = _$("ia-file-input");
+    if (fi) fi.value = "";
+  }
 
-    var info = _$("ia-file-info");
-    if (!info) return;
-    info.style.display = "block";
-    info.innerHTML =
-      '<div class="ia-file-info-row">' +
-      '<span class="ia-file-name">📄 ' + _esc(file.name) + '</span>' +
-      '<span class="ia-file-size">' + _fmtSize(file.size) + '</span>' +
-      '</div>' +
-      '<button class="ia-btn ia-btn-primary" id="ia-start-analyze">🔍 开始分析</button> ' +
-      '<button class="ia-btn" id="ia-cancel-file">取消</button>';
+  function _removeFile(index) {
+    state._files.splice(index, 1);
+    _renderFileList();
+  }
 
-    _$("ia-start-analyze").addEventListener("click", function () { _readAndAnalyze(file); });
-    _$("ia-cancel-file").addEventListener("click", function () {
-      info.style.display = "none";
-      var fileInput = _$("ia-file-input");
-      if (fileInput) fileInput.value = "";
+  function _renderFileList() {
+    var list = _$("ia-file-list");
+    if (!list) return;
+    if (!state._files.length) { list.style.display = "none"; list.innerHTML = ""; _renderFooter(null); return; }
+    list.style.display = "block";
+    var totalSize = state._files.reduce(function (s, f) { return s + f.size; }, 0);
+    var h = '<div class="ia-file-summary">已选择 <strong>' + state._files.length + '</strong> 个文件（共 ' + _fmtSize(totalSize) + '）</div>';
+    state._files.forEach(function (f, i) {
+      h += '<div class="ia-file-row">' +
+        '<span class="ia-file-name">📄 ' + _esc(f.name) + '</span>' +
+        '<span class="ia-file-size">' + _fmtSize(f.size) + '</span>' +
+        '<button class="ia-file-del" data-idx="' + i + '" title="移除">✕</button>' +
+        '</div>';
     });
-    state._selectedFile = file;
+    list.innerHTML = h;
+
+    // bind delete buttons
+    list.querySelectorAll(".ia-file-del").forEach(function (btn) {
+      btn.addEventListener("click", function () { _removeFile(parseInt(this.dataset.idx)); });
+    });
+
+    _renderFooter(
+      '<button class="ia-btn ia-btn-primary" id="ia-start-analyze">🔍 开始分析（' + state._files.length + ' 个文件）</button>' +
+      '<button class="ia-btn" id="ia-clear-files">清空列表</button>'
+    );
+    _$("ia-start-analyze").addEventListener("click", _readAndAnalyze);
+    _$("ia-clear-files").addEventListener("click", function () { state._files = []; _renderFileList(); });
   }
 
   function _fmtSize(b) { return b < 1024 ? b+" B" : b < 1048576 ? (b/1024).toFixed(1)+" KB" : (b/1048576).toFixed(1)+" MB"; }
 
-  function _readAndAnalyze(file) {
-    state.phase = "analyzing"; state.sourceFile = file.name; _renderAnalyzing();
-    var reader = new FileReader();
-    reader.onload = function (e) { _callAnalyze(e.target.result, file.name); };
-    reader.onerror = function () {
-      _renderError("文件读取失败", "请检查文件编码，当前本地读取仅支持 UTF-8 文本。");
-    };
-    reader.readAsText(file, "UTF-8");
+  function _readAndAnalyze() {
+    if (!state._files.length) { _toast("请先选择文件"); return; }
+    state.phase = "analyzing";
+    var names = state._files.map(function (f) { return f.name; });
+    state.sourceFile = names.length === 1 ? names[0] : names.length + " 个文件";
+    _renderAnalyzing();
+
+    // 并行读取所有文件
+    var pending = state._files.length;
+    var hasError = false;
+    state._files.forEach(function (f) {
+      var reader = new FileReader();
+      reader.onload = function (e) { f.content = e.target.result; pending--; if (pending === 0 && !hasError) _doAnalyze(); };
+      reader.onerror = function () { hasError = true; _renderError("文件读取失败", "无法读取: " + f.name); };
+      reader.readAsText(f.file, "UTF-8");
+    });
+  }
+
+  function _doAnalyze() {
+    // 合并所有文件内容，带分隔标记
+    var parts = state._files.map(function (f) {
+      return "=== 文档：" + f.name + " ===\n\n" + (f.content || "");
+    });
+    var merged = parts.join("\n\n");
+    // 发送：用数组格式传给后端
+    var filesPayload = state._files.map(function (f) { return { content: f.content, fileName: f.name }; });
+    _callAnalyze(merged, state.sourceFile, filesPayload);
   }
 
   // ── Analyzing ──
@@ -156,7 +203,7 @@
     _renderBody(
       '<div class="ia-center"><div class="ia-spinner"></div>' +
       '<div class="ia-status-text">🤖 Kimi AI 正在分析 <strong>' + _esc(state.sourceFile) + '</strong>...</div>' +
-      '<div class="ia-hint">长文将自动分块处理，可能需要数十秒</div></div>'
+      '<div class="ia-hint">' + state._files.length + ' 个文件将合并分析，可能需要数十秒</div></div>'
     );
     _renderFooter(null);
   }
@@ -209,9 +256,14 @@
         var isConflict = sug.status === "conflict";
         var cardClass = (state.selectedIds[idx] ? "" : "ia-unchecked") + (isConflict ? " ia-conflict" : "");
 
+        var mergeBadge = "";
+        if (sug._mergedFrom && sug._mergedFrom > 1) {
+          mergeBadge = '<span class="ia-merge-badge" title="该条目由 ' + sug._mergedFrom + ' 处来源合并">📚 已合并 ' + sug._mergedFrom + ' 份文档的描述</span>';
+        }
         html += '<div class="ia-suggestion-card' + cardClass + '" data-idx="' + idx + '">' +
           '<label class="ia-suggestion-checkbox">' +
           (isConflict ? '<span class="ia-conflict-badge" title="与其他条目存在冲突">⚠️ 冲突</span>' : '') +
+          (mergeBadge || '') +
           '<input type="checkbox" data-idx="' + idx + '" ' + checked + (isConflict ? " disabled" : "") + '>' +
           '<span class="ia-suggestion-name">' + _esc(sug.title) + '</span>' +
           '<span class="ia-confidence">' + Math.round((sug.confidence || 0.7) * 100) + '%</span>' +
@@ -320,12 +372,16 @@
 
   // ── API calls ──
 
-  function _callAnalyze(content, fileName) {
+  function _callAnalyze(content, fileName, filesPayload) {
     state.phase = "analyzing"; _renderAnalyzing();
+    var body = { projectId: state.projectId, content: content, fileName: fileName };
+    if (filesPayload && filesPayload.length > 1) {
+      body.files = filesPayload;
+    }
     fetch("/api/import/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId: state.projectId, content: content, fileName: fileName }),
+      body: JSON.stringify(body),
     })
     .then(function (r) { return r.json(); })
     .then(function (result) {
@@ -419,7 +475,7 @@
 
   function _reset() {
     state.phase = "upload"; state.suggestions = []; state.selectedIds = {};
-    state.confirmResult = null; state._selectedFile = null; _renderUpload();
+    state.confirmResult = null; state._files = []; _renderUpload();
   }
 
   // ── Public API ──

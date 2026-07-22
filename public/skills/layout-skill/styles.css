@@ -69,6 +69,12 @@ body{
 .chapter .ch-icon.writing{color:#6b9aed}
 .chapter .ch-icon.done{color:#5aab8a}
 .chapter .wc{font-size:10px;color:#555;margin-left:auto;white-space:nowrap}
+.chapter .tree-delete-ch-btn{
+  background:none;border:none;color:#6b6880;font-size:14px;line-height:1;
+  cursor:pointer;padding:0 2px;margin-left:4px;opacity:0;transition:.15s;
+}
+.chapter:hover .tree-delete-ch-btn{opacity:1}
+.chapter .tree-delete-ch-btn:hover{color:#c06060}
 
 /* Center Panel */
 #center-panel{
@@ -214,6 +220,20 @@ body{
 }
 #project-selector:focus { border-color: #d4a574; }
 
+/* ── Save Button ── */
+.save-btn {
+  padding: 4px 14px; border-radius: 6px;
+  border: 1px solid #d4a574; background: transparent;
+  color: #d4a574; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  font-family: inherit; margin-left: auto; white-space: nowrap;
+}
+.save-btn:hover { background: #d4a574; color: #0b0a12; }
+.save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.save-btn.saving { background: #d4a574; color: #0b0a12; }
+.save-btn.save-error { border-color: #c06060; color: #c06060; }
+.save-btn.save-error:hover { background: #c06060; color: #fff; }
+
 /* ── Save Indicator ── */
 .save-indicator {
   font-size: 11px; color: #5aab8a; margin-left: 12px;
@@ -344,3 +364,169 @@ body{
 .novelos-modal-btn-primary:hover {
   background: #c09468;
 }
+
+/* ── Generation Context (usedItems display) ── */
+.ctx-group {
+  padding: 8px 0; border-bottom: 1px solid #252336;
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px;
+}
+.ctx-group:last-child { border-bottom: none; }
+
+.ctx-group-icon {
+  width: 20px; font-size: 14px; text-align: center; flex-shrink: 0;
+}
+
+.ctx-group-label {
+  font-size: 11px; color: #6b6880; width: 36px; flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.ctx-group-items {
+  display: flex; flex-wrap: wrap; gap: 4px; flex: 1;
+}
+
+.ctx-tag {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; cursor: pointer; transition: 0.15s;
+}
+
+.ctx-tag-char {
+  background: #2a2540; color: #a78bfa; border: 1px solid #a78bfa33;
+}
+.ctx-tag-char:hover { background: #a78bfa22; border-color: #a78bfa; }
+
+.ctx-tag-loc {
+  background: #1e2d28; color: #5aab8a; border: 1px solid #5aab8a33;
+}
+.ctx-tag-loc:hover { background: #5aab8a22; border-color: #5aab8a; }
+
+.ctx-tag-fac {
+  background: #2a2318; color: #d4a574; border: 1px solid #d4a57433;
+}
+.ctx-tag-fac:hover { background: #d4a57422; border-color: #d4a574; }
+
+.ctx-tag-rule {
+  background: #252336; color: #6b9aed; border: 1px solid #6b9aed33;
+  cursor: default;
+}
+
+.ctx-tag-fore {
+  background: #2d1f30; color: #d06baa; border: 1px solid #d06baa33;
+}
+
+.ctx-none {
+  font-size: 11px; color: #555; font-style: italic; padding: 2px 0;
+}
+
+.ctx-value {
+  font-size: 11px; color: #8a8798; padding: 2px 0;
+}
+
+/* ── Suggestion Cards (定稿后新设定建议) ── */
+.suggestion-card {
+  padding: 12px; border-radius: 8px; background: #1e1d30;
+  border: 1px solid #252336; margin-bottom: 10px;
+}
+.sug-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.sug-type {
+  font-size: 10px; padding: 1px 6px; border-radius: 4px;
+  background: #d4a57422; color: #d4a574; white-space: nowrap;
+}
+.sug-name {
+  font-size: 13px; font-weight: 600; color: #d0cec8;
+}
+.sug-content {
+  font-size: 11px; color: #8a8798; line-height: 1.5; margin-bottom: 6px;
+}
+.sug-reason {
+  font-size: 10px; color: #6b6880; margin-bottom: 8px; font-style: italic;
+}
+.sug-actions {
+  display: flex; align-items: center; gap: 8px;
+}
+.sug-add-btn {
+  padding: 4px 12px; border-radius: 6px; border: 1px solid #5aab8a;
+  background: transparent; color: #5aab8a; font-size: 11px;
+  cursor: pointer; transition: 0.15s; font-family: inherit;
+}
+.sug-add-btn:hover { background: #5aab8a22; }
+.sug-add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sug-status {
+  font-size: 11px;
+}
+
+/* ── Plot Designer Modal ── */
+.pd-modal {
+  background: #1e1d30; border: 1px solid #333; border-radius: 12px;
+  padding: 0; width: 100%; max-height: 85vh; display: flex; flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6); animation: novelos-modal-in 0.2s ease;
+}
+.pd-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 24px; border-bottom: 1px solid #252336;
+}
+.pd-title { font-size: 16px; font-weight: 700; color: #d4a574; }
+.pd-steps { font-size: 11px; color: #6b6880; }
+.pd-body {
+  padding: 20px 24px; overflow-y: auto; flex: 1;
+}
+.pd-footer {
+  display: flex; gap: 8px; justify-content: flex-end;
+  padding: 14px 24px; border-top: 1px solid #252336;
+}
+.pd-section-label {
+  font-size: 12px; font-weight: 600; color: #d4a574;
+  margin: 16px 0 8px 0; padding-top: 8px; border-top: 1px solid #252336;
+}
+.pd-section-label:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+.pd-label {
+  display: block; font-size: 11px; color: #8a8798; margin: 10px 0 4px 0;
+}
+.pd-input {
+  width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #333;
+  background: #14131e; color: #d0cec8; font-size: 13px; font-family: inherit;
+  outline: none; box-sizing: border-box;
+}
+.pd-input:focus { border-color: #d4a574; }
+.pd-input::placeholder { color: #4a4758; }
+.pd-textarea {
+  width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #333;
+  background: #14131e; color: #d0cec8; font-size: 13px; font-family: inherit;
+  outline: none; resize: vertical; box-sizing: border-box; line-height: 1.6;
+}
+.pd-textarea:focus { border-color: #d4a574; }
+.pd-skeleton { font-size: 12px; line-height: 1.7; }
+.pd-hint { font-size: 11px; color: #6b6880; margin-top: 8px; }
+.pd-btn-cancel, .pd-btn-back {
+  padding: 8px 16px; border-radius: 6px; border: 1px solid #333;
+  background: transparent; color: #8a8798; font-size: 12px;
+  cursor: pointer; font-family: inherit;
+}
+.pd-btn-cancel:hover, .pd-btn-back:hover { color: #d0cec8; border-color: #555; }
+.pd-btn-next, .pd-btn-primary {
+  padding: 8px 20px; border-radius: 6px; border: 1px solid #d4a574;
+  background: #d4a574; color: #0b0a12; font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.pd-btn-next:hover, .pd-btn-primary:hover { background: #c09468; }
+.pd-btn-next:disabled, .pd-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Plot Seed in Right Panel ── */
+.seed-row {
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.seed-input {
+  flex: 1; padding: 7px 10px; border-radius: 6px; border: 1px solid #333;
+  background: #14131e; color: #d4a574; font-size: 12px; font-family: inherit;
+  outline: none; resize: vertical; min-height: 48px; box-sizing: border-box;
+}
+.seed-input:focus { border-color: #d4a574; }
+.seed-input::placeholder { color: #4a4758; }
+.seed-design-btn {
+  padding: 5px 10px; border-radius: 6px; border: 1px solid #d4a574;
+  background: transparent; color: #d4a574; font-size: 11px; white-space: nowrap;
+  cursor: pointer; font-family: inherit; transition: 0.15s;
+}
+.seed-design-btn:hover { background: #d4a57422; }

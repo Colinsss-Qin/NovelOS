@@ -23,7 +23,7 @@ class OpenAICompatProvider {
         Authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify({
-        model: this.model,
+        model: opts.model || this.model,
         messages: [
           ...(opts.systemPrompt ? [{ role: "system", content: opts.systemPrompt }] : []),
           { role: "user", content: opts.userPrompt || opts.prompt },
@@ -62,7 +62,7 @@ class OpenAICompatProvider {
         Authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify({
-        model: this.model,
+        model: opts.model || this.model,
         messages: [
           ...(opts.systemPrompt ? [{ role: "system", content: opts.systemPrompt }] : []),
           { role: "user", content: opts.userPrompt || opts.prompt },

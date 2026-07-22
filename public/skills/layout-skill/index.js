@@ -18,6 +18,18 @@ var toastTimer;
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
+  function projectApiPath(projectId, path) {
+    return "/api/projects/" + encodeURIComponent(projectId) + path;
+  }
+
+  function volumeChaptersApiPath(projectId, volumeId) {
+    return projectApiPath(projectId, "/volumes/" + encodeURIComponent(volumeId) + "/chapters");
+  }
+
+  function chapterApiPath(projectId, chapterId) {
+    return projectApiPath(projectId, "/chapters/" + encodeURIComponent(chapterId));
+  }
+
   function showToast(msg) {
     var t = document.getElementById("toast");
     if (!t) return;
@@ -118,18 +130,28 @@ var toastTimer;
     var found = state.projects.find(function (p) { return p.id === projectId; });
     if (!found) return;
 
-    state.activeProject = found;
-    state.activeChapter = null;
-    clearEditor();
-    resetStudioHint();
+    var doSwitch = function () {
+      state.activeProject = found;
+      state.activeChapter = null;
+      clearEditor();
+      resetStudioHint();
 
-    var nameEl = document.getElementById("topbar-project-name");
-    if (nameEl) nameEl.textContent = "项目：" + (found.name || found.title || "未命名项目");
-    var sel = document.getElementById("project-selector");
-    if (sel) sel.value = projectId;
+      var nameEl = document.getElementById("topbar-project-name");
+      if (nameEl) nameEl.textContent = "项目：" + (found.name || found.title || "未命名项目");
+      var sel = document.getElementById("project-selector");
+      if (sel) sel.value = projectId;
 
-    syncProjectModules(found);
-    return loadVolumes(projectId);
+      syncProjectModules(found);
+      return loadVolumes(projectId);
+    };
+
+    if (state.activeChapter) {
+      var editor = document.getElementById("editor");
+      if (editor && editor.value !== (state.activeChapter.content || "")) {
+        return saveChapter(true).then(doSwitch);
+      }
+    }
+    return doSwitch();
   }
 
   function syncProjectModules(project) {
@@ -151,7 +173,7 @@ var toastTimer;
   }
 
   function loadVolumes(projectId) {
-    return fetch("/api/projects/" + encodeURIComponent(projectId) + "/volumes")
+    return fetch(projectApiPath(projectId, "/volumes"))
       .then(function (r) { return r.json(); })
       .then(function (result) {
         state.volumes = result.success ? (result.data || []) : [];
@@ -168,13 +190,14 @@ var toastTimer;
     buildTree(state.volumes, document.getElementById("story-tree"), {
       onCreateChapter: promptCreateChapter,
       onChapterClick: function (chapterId) { loadChapter(chapterId); },
+      onDeleteChapter: deleteChapter,
     });
   }
 
   function ensureDefaultVolume() {
     if (!state.activeProject) return Promise.reject(new Error("请先选择项目"));
     if (state.volumes.length > 0) return Promise.resolve(state.volumes[0]);
-    return fetch("/api/projects/" + encodeURIComponent(state.activeProject.id) + "/volumes", {
+    return fetch(projectApiPath(state.activeProject.id, "/volumes"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "正文", order: 0 }),
@@ -203,8 +226,7 @@ var toastTimer;
       .then(function (volume) {
         var targetVolumeId = volumeId || volume.id;
         return fetch(
-          "/api/projects/" + encodeURIComponent(state.activeProject.id) +
-          "/volumes/" + encodeURIComponent(targetVolumeId) + "/chapters",
+          volumeChaptersApiPath(state.activeProject.id, targetVolumeId),
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -217,7 +239,7 @@ var toastTimer;
         if (!result.success) throw new Error(result.error || "创建章节失败");
         showToast("章节已创建");
         return loadVolumes(state.activeProject.id).then(function () {
-          return loadChapter(result.data.id);
+          return loadChapter(result.data.id, true);
         });
       })
       .catch(function (e) {
@@ -226,36 +248,52 @@ var toastTimer;
       });
   }
 
-  function loadChapter(chapterId) {
+  function loadChapter(chapterId, skipSave) {
     if (!state.activeProject) return;
-    return fetch(
-      "/api/projects/" + encodeURIComponent(state.activeProject.id) +
-      "/chapters/" + encodeURIComponent(chapterId)
-    )
-      .then(function (r) { return r.json(); })
-      .then(function (result) {
-        if (!result.success) throw new Error(result.error || "章节加载失败");
-        state.activeChapter = result.data;
-        renderEditor(result.data);
-        renderContextPanel(result.data);
-        highlightChapter(chapterId);
-      })
-      .catch(function (e) {
-        showToast(e.message);
-        console.error("LayoutSkill: loadChapter failed:", e);
-      });
+
+    // 点击当前已选中的章节，无需重新加载
+    if (state.activeChapter && state.activeChapter.id === chapterId) return;
+
+    clearTimeout(state.saveTimer);
+
+    var doLoad = function () {
+      return fetch(chapterApiPath(state.activeProject.id, chapterId))
+        .then(function (r) { return r.json(); })
+        .then(function (result) {
+          if (!result.success) throw new Error(result.error || "章节加载失败");
+          state.activeChapter = result.data;
+          renderEditor(result.data);
+          renderContextPanel(result.data);
+          highlightChapter(chapterId);
+        })
+        .catch(function (e) {
+          showToast(e.message);
+          console.error("LayoutSkill: loadChapter failed:", e);
+        });
+    };
+
+    if (!skipSave && state.activeChapter && state.activeChapter.id !== chapterId) {
+      var editor = document.getElementById("editor");
+      if (editor && editor.value !== (state.activeChapter.content || "")) {
+        showToast("正在保存当前章节...");
+        return saveChapter(true).then(doLoad);
+      }
+    }
+    return doLoad();
   }
 
-  function saveChapter() {
+  function saveChapter(blockOnFailure) {
     if (!state.activeProject || !state.activeChapter) return Promise.resolve();
     var editor = document.getElementById("editor");
     if (!editor) return Promise.resolve();
     var content = editor.value || "";
     var wordCount = content.replace(/\s/g, "").length;
+    var chapterId = state.activeChapter.id;
+
+    setSaveButtonState(true);
 
     return fetch(
-      "/api/projects/" + encodeURIComponent(state.activeProject.id) +
-      "/chapters/" + encodeURIComponent(state.activeChapter.id),
+      chapterApiPath(state.activeProject.id, chapterId),
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -265,20 +303,79 @@ var toastTimer;
       .then(function (r) { return r.json(); })
       .then(function (result) {
         if (!result.success) throw new Error(result.error || "保存失败");
-        state.activeChapter = result.data;
+        if (state.activeChapter && state.activeChapter.id === chapterId) {
+          state.activeChapter = result.data;
+        }
         updateMeta(wordCount);
         showSaveIndicator("已保存");
+        setSaveButtonState(false);
         loadVolumes(state.activeProject.id);
+        return result.data;
       })
       .catch(function (e) {
         showSaveIndicator("保存失败");
+        setSaveButtonState(false, true);
         console.error("LayoutSkill: save failed:", e);
+        if (blockOnFailure) throw e;
       });
+  }
+
+  function deleteChapter(chapterId) {
+    if (!state.activeProject || !chapterId) return Promise.resolve();
+    var proceed = Promise.resolve(true);
+    if (window.NovelOSModal && NovelOSModal.confirm) {
+      proceed = NovelOSModal.confirm("删除章节", "确定删除这个章节吗？");
+    }
+
+    return proceed.then(function (ok) {
+      if (!ok) return;
+      clearTimeout(state.saveTimer);
+      return fetch(
+        chapterApiPath(state.activeProject.id, chapterId),
+        { method: "DELETE" }
+      )
+        .then(function (r) { return r.json(); })
+        .then(function (result) {
+          if (!result.success) throw new Error(result.error || "删除章节失败");
+          if (state.activeChapter && state.activeChapter.id === chapterId) {
+            state.activeChapter = null;
+            clearEditor();
+            resetStudioHint();
+          }
+          showToast("章节已删除");
+          return loadVolumes(state.activeProject.id);
+        });
+    }).catch(function (e) {
+      showToast(e.message || "删除章节失败");
+      console.error("LayoutSkill: deleteChapter failed:", e);
+    });
+  }
+
+  function setSaveButtonState(loading, isError) {
+    var btn = document.getElementById("save-btn");
+    if (!btn) return;
+    if (loading) {
+      btn.textContent = "保存中...";
+      btn.disabled = true;
+      btn.classList.add("saving");
+    } else {
+      btn.disabled = false;
+      btn.classList.remove("saving");
+      if (isError) {
+        btn.textContent = "重试保存";
+        btn.classList.add("save-error");
+      } else {
+        btn.textContent = "💾 保存";
+        btn.classList.remove("save-error");
+      }
+    }
   }
 
   function debounceSave() {
     clearTimeout(state.saveTimer);
-    state.saveTimer = setTimeout(saveChapter, 500);
+    state.saveTimer = setTimeout(function () {
+      saveChapter();
+    }, 800);
   }
 
   function bindEditorEvents() {
@@ -289,6 +386,16 @@ var toastTimer;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
         saveChapter();
+      }
+    });
+
+    window.addEventListener("beforeunload", function (e) {
+      if (!state.activeChapter) return;
+      var ed = document.getElementById("editor");
+      if (ed && ed.value !== (state.activeChapter.content || "")) {
+        e.preventDefault();
+        e.returnValue = "你有未保存的修改，确定要离开吗？";
+        return e.returnValue;
       }
     });
   }
@@ -312,12 +419,57 @@ var toastTimer;
   function renderContextPanel(ch) {
     var container = document.getElementById("right-content");
     if (!container) return;
+    var projectId = state.activeProject ? state.activeProject.id : "";
+
     container.innerHTML =
+      '<div class="section"><div class="section-title">🌱 剧情种子</div>' +
+      '<div class="seed-row">' +
+      '<textarea class="seed-input" id="seed-input" placeholder="本章要发生的事…" rows="2">' + esc(ch.summary || "") + '</textarea>' +
+      '</div>' +
+      '<div style="margin-top:6px">' +
+      '<button class="seed-design-btn" id="seed-design-btn" onclick="PlotDesigner.show(\'' + ch.id + '\',\'' + projectId + '\',{hero:\'\',heroGoal:\'\',rival:\'\',rivalGoal:\'\',infoGap:\'\',expected:\'\'})">🎯 启动剧情设计器</button>' +
+      '<button class="seed-design-btn" style="margin-left:6px;border-color:#5aab8a;color:#5aab8a" id="seed-save-btn">💾 保存种子</button>' +
+      '</div>' +
+      '</div>' +
       '<div class="section"><div class="section-title">章节信息</div>' +
       '<div class="ctx-item"><div class="ctx-label">标题</div><div class="ctx-value">' + esc(ch.title || "") + '</div></div>' +
       '<div class="ctx-item"><div class="ctx-label">状态</div><div class="ctx-value">' + formatChapterStatus(ch.status) + '</div></div>' +
       '<div class="ctx-item"><div class="ctx-label">字数</div><div class="ctx-value">' + (ch.wordCount || 0).toLocaleString() + ' 字</div></div>' +
       '</div>';
+
+    // Save seed button
+    setTimeout(function () {
+      var saveBtn = document.getElementById("seed-save-btn");
+      if (saveBtn) {
+        saveBtn.addEventListener("click", function () {
+          var seedVal = (document.getElementById("seed-input") || {}).value || "";
+          fetch("/api/projects/" + encodeURIComponent(projectId) + "/chapters/" + encodeURIComponent(ch.id), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ summary: seedVal }),
+          })
+          .then(function (r) { return r.json(); })
+          .then(function (result) {
+            if (result.success) {
+              if (state.activeChapter) state.activeChapter.summary = seedVal;
+              showToast("✅ 剧情种子已保存");
+            } else {
+              showToast("保存失败：" + (result.error || "未知错误"));
+            }
+          })
+          .catch(function (err) { showToast("请求失败：" + err.message); });
+        });
+      }
+      // Plot designer button: prefill with existing data
+      var pdBtn = document.getElementById("seed-design-btn");
+      if (pdBtn) {
+        pdBtn.addEventListener("click", function (e) {
+          var seedVal = (document.getElementById("seed-input") || {}).value || "";
+          var prefill = { hero: "", heroGoal: "", rival: "", rivalGoal: "", infoGap: seedVal, expected: "" };
+          PlotDesigner.show(ch.id, projectId, prefill);
+        });
+      }
+    }, 100);
   }
 
   function resetStudioHint() {
@@ -366,6 +518,7 @@ var toastTimer;
     createProject: createProject,
     createChapter: createChapter,
     saveChapter: saveChapter,
+    deleteChapter: deleteChapter,
     getActiveProjectId: function () { return state.activeProject ? state.activeProject.id : null; },
     getActiveChapter: function () { return state.activeChapter; },
     getState: function () { return state; },

@@ -153,6 +153,32 @@
   color: #6b6880;
 }
 
+/* ── File List (multi-file) ── */
+.ia-file-list {
+  margin-top: 12px;
+}
+.ia-file-summary {
+  font-size: 12px; color: #8a8798; margin-bottom: 8px;
+}
+.ia-file-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 10px; border-radius: 6px; background: #1e1d30;
+  border: 1px solid #252336; margin-bottom: 4px;
+}
+.ia-file-row .ia-file-name { flex: 1; font-size: 13px; }
+.ia-file-del {
+  background: none; border: none; color: #6b6880; cursor: pointer;
+  font-size: 16px; line-height: 1; padding: 0 4px; transition: 0.15s;
+}
+.ia-file-del:hover { color: #c06060; }
+
+/* ── Merge badge ── */
+.ia-merge-badge {
+  display: inline-block; padding: 1px 8px; border-radius: 4px;
+  background: #5aab8a22; color: #5aab8a; font-size: 10px;
+  margin-right: 6px; vertical-align: middle;
+}
+
 /* ── Center content (loading, empty) ── */
 .ia-center {
   flex: 1;

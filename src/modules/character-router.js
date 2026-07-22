@@ -25,6 +25,9 @@ function toCharacterDto(character) {
     motivation: character.motivation || "",
     status: character.status || "active",
     notes: character.notes || "",
+    speakingStyle: character.speakingStyle || "",
+    behaviorLogic: character.behaviorLogic || "",
+    forbidden: character.forbidden || "",
     createdAt: character.createdAt.toISOString(),
     updatedAt: character.updatedAt.toISOString(),
   };
@@ -63,6 +66,9 @@ function buildCharacterData(input, isCreate) {
   if (input.motivation !== undefined) data.motivation = input.motivation || "";
   if (input.status !== undefined) data.status = input.status || "active";
   if (input.notes !== undefined) data.notes = input.notes || "";
+  if (input.speakingStyle !== undefined) data.speakingStyle = input.speakingStyle || "";
+  if (input.behaviorLogic !== undefined) data.behaviorLogic = input.behaviorLogic || "";
+  if (input.forbidden !== undefined) data.forbidden = input.forbidden || "";
 
   if (isCreate) {
     if (data.alias === undefined) data.alias = "";

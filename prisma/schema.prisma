@@ -13,6 +13,7 @@ model Project {
   subtitle    String   @default("")
   genre       String
   description String?
+  theme       String   @default("")
   tags        String   @default("")
   cover       String   @default("")
   status      String   @default("筹备中")
@@ -52,15 +53,18 @@ model Character {
   factionId   String?
   faction     Faction? @relation(fields: [factionId], references: [id])
   personality String
-  appearance  String?
-  background  String?
-  goal        String   @default("")
-  motivation  String   @default("")
-  arc         String?
-  abilities   String?
-  notes       String?
-  tags        String?
-  status      String   @default("active")
+  appearance    String?
+  background    String?
+  goal          String   @default("")
+  motivation    String   @default("")
+  arc           String?
+  abilities     String?
+  speakingStyle String   @default("")
+  behaviorLogic String   @default("")
+  forbidden     String   @default("")
+  notes         String?
+  tags          String?
+  status        String   @default("active")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -175,12 +179,14 @@ model Chapter {
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   volumeId  String?
   volume    Volume?  @relation(fields: [volumeId], references: [id])
-  title     String
-  summary   String?
-  content   String?
-  wordCount Int      @default(0)
-  order     Int
-  status    String   @default("draft")
+  title       String
+  summary     String?
+  autoSummary String?
+  goal        String   @default("")
+  content     String?
+  wordCount   Int      @default(0)
+  order       Int
+  status      String   @default("draft")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -197,6 +203,13 @@ model Scene {
   chapter   Chapter? @relation(fields: [chapterId], references: [id])
   title     String
   summary   String?
+  goal      String   @default("")
+  conflict  String   @default("")
+  result    String   @default("")
+  characterIds String @default("[]")
+  locationIds  String @default("[]")
+  factionIds   String @default("[]")
+  tags         String @default("[]")
   order     Int
   status    String   @default("draft")
   createdAt DateTime @default(now())

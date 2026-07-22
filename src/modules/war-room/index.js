@@ -270,6 +270,137 @@ router.post("/:id/volumes/:volumeId/chapters", async (req, res, next) => {
   }
 });
 
+// DELETE /api/projects/:id/chapters/:chapterId - delete one chapter and its scenes
+router.delete("/:id/chapters/:chapterId", async (req, res, next) => {
+  try {
+    const projectId = req.params.id;
+    const chapterId = req.params.chapterId;
+
+    const existing = await prisma.chapter.findFirst({
+      where: { id: chapterId, projectId },
+      select: { id: true },
+    });
+    if (!existing) return res.status(404).json({ success: false, error: "Chapter not found" });
+
+    await prisma.$transaction([
+      prisma.futureScene.updateMany({
+        where: { projectId, expectedChapterId: chapterId },
+        data: { expectedChapterId: null },
+      }),
+      prisma.scene.deleteMany({ where: { projectId, chapterId } }),
+      prisma.chapter.delete({ where: { id: chapterId } }),
+    ]);
+
+    res.json({ success: true, data: { id: chapterId } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── Finalize: 章节定稿 → 自动摘要 + 设定提取建议 ──
+router.post("/:id/chapters/:chapterId/finalize", async (req, res, next) => {
+  try {
+    const chapter = await prisma.chapter.findFirst({
+      where: { id: req.params.chapterId, projectId: req.params.id },
+    });
+    if (!chapter) return res.status(404).json({ success: false, error: "Chapter not found" });
+    if (!chapter.content || chapter.content.trim().length < 100) {
+      return res.status(400).json({ success: false, error: "Chapter content is too short to finalize" });
+    }
+
+    const { getProviderForTask, hasApiKey } = require("../../skills/ai-skill");
+    if (!hasApiKey()) {
+      return res.status(400).json({ success: false, error: "未配置 API Key，无法生成摘要" });
+    }
+
+    const provider = getProviderForTask("auto_summary");
+    const contentSample = (chapter.content || "").slice(0, 6000);
+
+    // 并行调用：摘要 + 设定提取
+    const [summaryRes, suggestRes] = await Promise.allSettled([
+      provider.generate({
+        systemPrompt: "你是一个小说章节信息提取工具。只输出纯摘要文本，不要任何其他内容。",
+        userPrompt: [
+          "请为以下章节生成一段 150 字以内的摘要，要求：",
+          "1. 记录本章发生的核心事件（不是情节细节）",
+          "2. 记录人物的关键状态变化（如\"叶寒获得了风灵石\"）",
+          "3. 记录任何对后续剧情有影响的信息",
+          "4. 纯信息，不要文学修饰",
+          "",
+          "章节正文：",
+          contentSample,
+        ].join("\n"),
+        temperature: 0.3,
+        maxTokens: 300,
+      }),
+      provider.generate({
+        systemPrompt: "你是一个故事设定提取工具。只输出 JSON，不要任何解释或 Markdown 格式。",
+        userPrompt: [
+          "阅读以下章节，找出其中出现但可能尚未在故事圣经中记录的新信息。",
+          "只提取明确出现在文本中的内容，不要推断。",
+          "返回 JSON 格式：",
+          '{ "suggestions": [',
+          '  { "type": "character|location|faction|rule", "name": "条目名称", "content": "从文中提取的具体描述", "reason": "为什么建议添加（一句话）" }',
+          "] }",
+          "最多返回 5 条最重要的建议，没有新内容则返回空数组。",
+          "",
+          "章节正文：",
+          contentSample,
+        ].join("\n"),
+        temperature: 0.3,
+        maxTokens: 1000,
+      }),
+    ]);
+
+    // 处理摘要
+    let autoSummary = null;
+    if (summaryRes.status === "fulfilled") {
+      autoSummary = (summaryRes.value.content || "").trim().slice(0, 300);
+    } else {
+      console.warn("[finalize] summary generation failed:", summaryRes.reason?.message);
+    }
+
+    // 处理建议
+    let suggestions = [];
+    if (suggestRes.status === "fulfilled") {
+      try {
+        const raw = suggestRes.value.content || "";
+        const jsonMatch = raw.match(/\{[\s\S]*"suggestions"[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.suggestions && Array.isArray(parsed.suggestions)) {
+            suggestions = parsed.suggestions
+              .filter(s => s.name && s.content && ["character", "location", "faction", "rule"].includes(s.type))
+              .slice(0, 5);
+          }
+        }
+      } catch (e) {
+        console.warn("[finalize] suggestion parse failed:", e.message);
+      }
+    }
+
+    // 写入数据库：autoSummary + 状态更新为 finalized
+    await prisma.chapter.updateMany({
+      where: { id: chapter.id },
+      data: {
+        autoSummary,
+        status: "finalized",
+        updatedAt: new Date(),
+      },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        autoSummary,
+        suggestions,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ═══════════════════════════════════════════
 //  Scenes
 // ═══════════════════════════════════════════

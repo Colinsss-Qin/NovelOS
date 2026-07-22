@@ -10,6 +10,9 @@ function onChapterClick(fn) {
 function buildTree(volumes, treeEl, callbacks) {
   if (!treeEl) return;
   TreeCallbacks = callbacks || {};
+  if (TreeCallbacks.onChapterClick) {
+    ChapterClickHandler = TreeCallbacks.onChapterClick;
+  }
   treeEl.innerHTML = "";
 
   var actions = document.createElement("div");
@@ -71,13 +74,22 @@ function buildTree(volumes, treeEl, callbacks) {
       chDiv.innerHTML =
         '<span class="ch-icon seed">§</span>' +
         '<span class="ch-name">第 ' + ((ch.order || 0) + 1) + " 章 " + escHtml(ch.title || "未命名章节") + "</span>" +
-        wcText;
+        wcText +
+        '<button class="tree-delete-ch-btn" title="删除章节">×</button>';
 
       chDiv.addEventListener("click", function (e) {
         e.stopPropagation();
         if (ChapterClickHandler) ChapterClickHandler(ch.id, ch);
         highlightChapter(ch.id);
       });
+
+      var deleteBtn = chDiv.querySelector(".tree-delete-ch-btn");
+      if (deleteBtn && TreeCallbacks.onDeleteChapter) {
+        deleteBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          TreeCallbacks.onDeleteChapter(ch.id);
+        });
+      }
 
       chList.appendChild(chDiv);
     });

@@ -31,21 +31,22 @@ var TreeView = {
     this._bind();
   },
 
-  _renderVolume: function (vol) {
+  _renderVolume: function (volNode) {
+    var vol = volNode.volume || volNode;
     var h = '';
     h += '<div class="ob-tree-node" draggable="true" data-id="' + vol.id + '" data-type="volume">';
     h += '<div class="ob-tree-header">';
     h += '<span class="ob-tree-toggle open" data-toggle="vol-' + vol.id + '">▶</span>';
     h += '<span class="ob-tree-icon">📘</span>';
     h += '<span class="ob-tree-name volume">' + _esc(vol.title) + '</span>';
-    h += '<span class="ob-tree-meta">' + (vol.chapters ? vol.chapters.length : 0) + ' 章</span>';
+    h += '<span class="ob-tree-meta">' + (volNode.chapters ? volNode.chapters.length : 0) + ' 章</span>';
     h += '<span class="ob-tree-actions">';
     h += '<button class="ob-tree-act-btn" data-action="add-chapter" data-vid="' + vol.id + '" title="添加章节">+章</button>';
     h += '<button class="ob-tree-act-btn" data-action="delete" data-id="' + vol.id + '" data-type="volume" title="删除">✕</button>';
     h += '</span></div>';
     h += '<div class="ob-tree-children open" id="vol-' + vol.id + '">';
-    if (vol.chapters) {
-      vol.chapters.forEach(function (ch) { h += this._renderChapter(ch); }, this);
+    if (volNode.chapters) {
+      volNode.chapters.forEach(function (ch) { h += this._renderChapter(ch); }, this);
     }
     h += '</div></div>';
     return h;

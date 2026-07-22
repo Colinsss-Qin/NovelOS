@@ -32,6 +32,10 @@
   background: #1e1d30; color: #d0cec8; font-size: 11px; outline: none;
 }
 
+.ob-project-label {
+  font-size: 12px; color: #8a8798; margin-right: 8px; white-space: nowrap;
+}
+
 /* ── 主内容区 ── */
 .ob-content { flex: 1; overflow: auto; min-height: 0; }
 

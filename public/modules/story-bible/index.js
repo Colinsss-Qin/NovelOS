@@ -348,7 +348,16 @@
   window.StoryBible = {
     init: init,
     refresh: _refreshAll,
-    getState: function () { return state; }
+    getState: function () { return state; },
+    /** 从外部触发搜索（如上下文面板跳转） */
+    search: function (query, type) {
+      if (type) { state.activeType = type; TypeNav.setActive(type); }
+      state.searchQuery = query || "";
+      state.view = "list";
+      state.detailItem = null;
+      SearchBar.setQuery(query || "");
+      _refreshAll();
+    }
   };
 
 })();

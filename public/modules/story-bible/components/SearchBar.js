@@ -48,5 +48,14 @@ var SearchBar = {
     var clear = this.el.querySelector(".sb-search-clear");
     if (input) input.value = "";
     if (clear) clear.style.display = "none";
+  },
+
+  /** 外部设置搜索词（不触发 onSearch 回调） */
+  setQuery: function (query) {
+    if (!this.el) return;
+    var input = this.el.querySelector(".sb-search-input");
+    var clear = this.el.querySelector(".sb-search-clear");
+    if (input) input.value = query || "";
+    if (clear) clear.style.display = query ? "block" : "none";
   }
 };

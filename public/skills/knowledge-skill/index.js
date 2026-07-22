@@ -198,8 +198,8 @@
     // Utils
     types:    KnowledgeType,
     typeLabel: KnowledgeTypeLabel,
-    validateAttrs: validateAttrs,
-    buildAttrs: buildAttrs
+    buildAttrs: buildAttrs,
+    validateAttrs: validateAttrs
   };
 
 })();

@@ -1,0 +1,33 @@
+.studio-assistant { height:100%; display:flex; flex-direction:column; min-height:0; }
+.sa-header,.sa-context,.sa-compose-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.sa-header { padding:12px; border-bottom:1px solid #292638; }
+.sa-header-actions { display:flex; gap:6px; }
+.sa-small,.sa-link,.sa-send,.sa-stop { border:1px solid #45405a; background:#201d2d; color:#ddd7ed; border-radius:6px; padding:5px 8px; cursor:pointer; }
+.sa-link { border:0; background:transparent; color:#d4a574; padding:3px 5px; }
+.sa-link.danger { color:#d97878; }
+.sa-history { max-height:150px; overflow:auto; padding:7px; border-bottom:1px solid #292638; }
+.sa-history.hidden,.sa-stop.hidden { display:none; }
+.sa-history-item { width:100%; border:0; text-align:left; padding:7px; color:#aaa4ba; background:transparent; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sa-history-item.active { background:#29243a; color:#f1e8dc; }
+.sa-messages { flex:1; min-height:120px; overflow:auto; padding:10px; }
+.sa-empty,.sa-muted { color:#777187; font-size:12px; line-height:1.6; padding:12px; }
+.sa-message { margin:0 0 10px; padding:9px; border-radius:9px; background:#211e2c; }
+.sa-message.user { margin-left:22px; background:#30273b; }
+.sa-role { color:#d4a574; font-size:11px; margin-bottom:5px; }
+.sa-content { color:#e1ddea; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.55; font-size:13px; }
+.sa-message-actions { display:flex; flex-wrap:wrap; gap:2px; margin-top:7px; }
+.sa-context { padding:8px 10px; font-size:11px; color:#8d879b; border-top:1px solid #292638; }
+.sa-context-text { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sa-composer { padding:9px; border-top:1px solid #292638; }
+.sa-input { width:100%; min-height:72px; box-sizing:border-box; resize:vertical; border:1px solid #403a50; border-radius:7px; background:#15131e; color:#eee; padding:8px; }
+.sa-compose-actions { margin-top:7px; justify-content:flex-end; }
+.sa-send { background:#8b5e3c; border-color:#b17c54; }
+.sa-stop { color:#e79a9a; }
+.sa-memory-modal,.sa-memory-list { width:min(620px,90vw); max-height:80vh; overflow:auto; }
+.sa-memory-modal .novelos-modal-input { display:block; width:100%; box-sizing:border-box; margin:8px 0; }
+.sa-memory-content { min-height:180px; resize:vertical; }
+.sa-memory-card { margin:10px 0; padding:10px; border:1px solid #3a3548; border-radius:7px; }
+.sa-memory-card small { margin-left:8px; color:#928b9f; }
+.sa-memory-card p { white-space:pre-wrap; overflow-wrap:anywhere; color:#d7d1df; }
+.sa-suggestion { padding:7px 0; border-top:1px solid #393445; }
+.sa-suggestion span { display:block; color:#c8c1d1; margin:4px 0; }

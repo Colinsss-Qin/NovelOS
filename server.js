@@ -100,6 +100,10 @@ app.use("/api/import", importRouter);
 const contextRouter = require("./src/modules/context-router");
 app.use("/api/context", contextRouter);
 
+// Writing Studio assistant conversations and project-scoped memories
+const studioChatRouter = require("./src/modules/studio-chat-router");
+app.use("/api/chat", studioChatRouter);
+
 // ═══════════════════════════════════════════
 //  404 — API routes only (static files handled by express.static)
 // ═══════════════════════════════════════════

@@ -3,11 +3,12 @@ class ClaudeProvider {
   constructor() {
     this.name = "claude";
     this.baseURL = "https://api.anthropic.com/v1";
-    this.model = "claude-sonnet-4-6";
+    this.model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
     this.apiKey = process.env.ANTHROPIC_API_KEY || "";
   }
 
   async generate(opts) {
+    const prepared = this.prepareMessages(opts);
     const res = await fetch(`${this.baseURL}/messages`, {
       method: "POST",
       headers: {
@@ -19,10 +20,10 @@ class ClaudeProvider {
         model: this.model,
         max_tokens: opts.maxTokens ?? 4096,
         temperature: opts.temperature ?? 0.7,
-        system: opts.systemPrompt
-          ? [{ type: "text", text: opts.systemPrompt }]
+        system: prepared.system
+          ? [{ type: "text", text: prepared.system }]
           : undefined,
-        messages: [{ role: "user", content: opts.userPrompt || opts.prompt }],
+        messages: prepared.messages,
       }),
       signal: opts.signal,
     });
@@ -44,6 +45,7 @@ class ClaudeProvider {
   }
 
   async *generateStream(opts) {
+    const prepared = this.prepareMessages(opts);
     const res = await fetch(`${this.baseURL}/messages`, {
       method: "POST",
       headers: {
@@ -55,10 +57,10 @@ class ClaudeProvider {
         model: this.model,
         max_tokens: opts.maxTokens ?? 4096,
         temperature: opts.temperature ?? 0.7,
-        system: opts.systemPrompt
-          ? [{ type: "text", text: opts.systemPrompt }]
+        system: prepared.system
+          ? [{ type: "text", text: prepared.system }]
           : undefined,
-        messages: [{ role: "user", content: opts.userPrompt || opts.prompt }],
+        messages: prepared.messages,
         stream: true,
       }),
       signal: opts.signal,
@@ -97,6 +99,19 @@ class ClaudeProvider {
         }
       }
     }
+  }
+
+  prepareMessages(opts) {
+    const source = opts.messages || [
+      ...(opts.systemPrompt ? [{ role: "system", content: opts.systemPrompt }] : []),
+      { role: "user", content: opts.userPrompt || opts.prompt },
+    ];
+    const system = source.filter((item) => item.role === "system").map((item) => item.content).join("\n\n");
+    const messages = source.filter((item) => item.role !== "system").map((item) => ({
+      role: item.role === "assistant" ? "assistant" : "user",
+      content: item.content,
+    }));
+    return { system, messages };
   }
 }
 

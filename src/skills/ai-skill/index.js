@@ -88,6 +88,11 @@ function hasApiKey() {
   return !!(process.env.DEEPSEEK_API_KEY || process.env.KIMI_API_KEY || process.env.ANTHROPIC_API_KEY);
 }
 
+function getProviderInfo(provider) {
+  const selected = provider || getProvider();
+  return { provider: selected.name, model: selected.model };
+}
+
 function defaultProviderName() {
   // 默认 DeepSeek-v3。若未配置 key 则在后端返回明确错误，
   // 不再自动回退到其他厂商。
@@ -351,35 +356,12 @@ async function handleGenerateRoute(req, res) {
     let finalSystemPrompt = systemPrompt || (task ? TASK_SYSTEM_PROMPTS[task] : "") || "";
     let finalUserPrompt = userPrompt;
 
-    // [DEBUG] 请求入参日志
-    console.log("══════════════════════════════════════");
-    console.log("[generate] 请求入参:");
-    console.log("  task:", task);
-    console.log("  chapterId:", chapterId);
-    console.log("  projectId:", projectId);
-    console.log("  chapterTitle:", chapterTitle);
-    console.log("  chapterSummary:", chapterSummary);
-    console.log("  projectGenre:", projectGenre);
-    console.log("  userPrompt (前端传入):", userPrompt ? userPrompt.slice(0, 100) : "(空)");
-    console.log("  systemPrompt (前端传入):", systemPrompt ? systemPrompt.slice(0, 100) : "(空)");
-    console.log("  模式:", (chapterId && projectId) ? "服务端上下文装配" : "前端直传");
-
     if (chapterId && projectId) {
       try {
         const ctx = await buildChapterContext(chapterId, projectId);
         usedItems = ctx.usedItems;
         finalSystemPrompt = buildSystemPrompt(projectGenre, ctx.contextBlock);
         finalUserPrompt = userPrompt || buildUserPrompt(chapterTitle, chapterSummary);
-
-        // [DEBUG] 服务端装配后的完整 prompt
-        console.log("[generate] 服务端装配后:");
-        console.log("=== SYSTEM PROMPT (前600字符) ===");
-        console.log(finalSystemPrompt.slice(0, 600));
-        console.log("=== SYSTEM PROMPT 总长:", finalSystemPrompt.length, "字符 ===");
-        console.log("=== USER PROMPT ===");
-        console.log(finalUserPrompt);
-        console.log("=== USER PROMPT 总长:", finalUserPrompt.length, "字符 ===");
-        console.log("══════════════════════════════════════");
       } catch (ctxErr) {
         console.error("[generate] context build failed:", ctxErr.message);
         if (!finalUserPrompt) {
@@ -389,32 +371,9 @@ async function handleGenerateRoute(req, res) {
           return;
         }
       }
-    } else {
-      // [DEBUG] 前端直传模式的 prompt
-      console.log("[generate] 前端直传模式:");
-      console.log("=== SYSTEM PROMPT (前300字符) ===");
-      console.log(finalSystemPrompt.slice(0, 300));
-      console.log("=== USER PROMPT (前300字符) ===");
-      console.log((finalUserPrompt || "").slice(0, 300));
-      console.log("══════════════════════════════════════");
     }
 
     let tokenCount = 0;
-
-    // [DEBUG] 即将发送给 AI 的完整 messages
-    console.log("[generate] === 发送给 AI 的完整参数 ===");
-    console.log("  taskType:", isChapterGen ? "chapter_generate" : (task || "generic"));
-    console.log("  provider:", provider.name, "model:", provider.model);
-    console.log("  temperature:", temperature ?? 0.7, "maxTokens:", maxTokens ?? 4096);
-    console.log("  messages[0] role:", "system");
-    console.log("  messages[0] content (前800字符):");
-    console.log(finalSystemPrompt.slice(0, 800));
-    console.log("  messages[0] content 总长度:", finalSystemPrompt.length, "字符");
-    console.log("  messages[1] role:", "user");
-    console.log("  messages[1] content (前500字符):");
-    console.log(finalUserPrompt.slice(0, 500));
-    console.log("  messages[1] content 总长度:", finalUserPrompt.length, "字符");
-    console.log("══════════════════════════════════════");
 
     try {
       const stream = provider.generateStream({
@@ -521,4 +480,4 @@ function _buildPlotDesignerUserPrompt(fields) {
   return lines.join('\n');
 }
 
-module.exports = { getProvider, getProviderForTask, handleGenerateRoute, handlePlotDesignerRoute, parseAndValidateSkeleton, hasApiKey, TASK_SYSTEM_PROMPTS, MODEL_CONFIG };
+module.exports = { getProvider, getProviderForTask, getProviderInfo, handleGenerateRoute, handlePlotDesignerRoute, parseAndValidateSkeleton, hasApiKey, missingKeyMessage, TASK_SYSTEM_PROMPTS, MODEL_CONFIG };

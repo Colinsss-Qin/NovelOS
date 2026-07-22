@@ -134,7 +134,8 @@ var toastTimer;
       state.activeProject = found;
       state.activeChapter = null;
       clearEditor();
-      resetStudioHint();
+      if (window.StudioAssistant) StudioAssistant.onProjectChange(found);
+      else resetStudioHint();
 
       var nameEl = document.getElementById("topbar-project-name");
       if (nameEl) nameEl.textContent = "项目：" + (found.name || found.title || "未命名项目");
@@ -263,7 +264,8 @@ var toastTimer;
           if (!result.success) throw new Error(result.error || "章节加载失败");
           state.activeChapter = result.data;
           renderEditor(result.data);
-          renderContextPanel(result.data);
+          if (window.StudioAssistant) StudioAssistant.onChapterChange(result.data);
+          else renderContextPanel(result.data);
           highlightChapter(chapterId);
         })
         .catch(function (e) {

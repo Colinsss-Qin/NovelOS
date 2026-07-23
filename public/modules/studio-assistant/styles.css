@@ -9,6 +9,10 @@
 .sa-history.hidden,.sa-stop.hidden { display:none; }
 .sa-history-item { width:100%; border:0; text-align:left; padding:7px; color:#aaa4ba; background:transparent; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .sa-history-item.active { background:#29243a; color:#f1e8dc; }
+.sa-status { margin:8px 10px 0; padding:9px; border-radius:7px; font-size:12px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.sa-status.loading { color:#c5b58f; background:#2c271d; border:1px solid #4c422d; }
+.sa-status.error { color:#efb0b0; background:#321f26; border:1px solid #663842; }
+.sa-status-message { line-height:1.45; }
 .sa-messages { flex:1; min-height:120px; overflow:auto; padding:10px; }
 .sa-empty,.sa-muted { color:#777187; font-size:12px; line-height:1.6; padding:12px; }
 .sa-message { margin:0 0 10px; padding:9px; border-radius:9px; background:#211e2c; }

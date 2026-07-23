@@ -7,13 +7,24 @@ const router = express.Router();
 const COPILOT_PROMPT = `你是作者的创作副驾驶。你的任务是讨论、分析、检查和提供备选方案。尊重作者的最终决定。除非用户明确要求，否则不要直接生成完整章节，不要假装某个建议已经写入正文或故事圣经。指出记忆冲突，但不要自行覆盖。`;
 const VALID_ROLES = new Set(["user", "assistant", "system"]);
 
-function fail(res, status, message) {
-  return res.status(status).json({ success: false, error: message });
+function fail(res, status, message, code) {
+  return res.status(status).json({ success: false, error: message, ...(code ? { code } : {}) });
 }
 
 function cleanText(value, max) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
+
+router.use((req, res, next) => {
+  if (prisma.chatSession && prisma.chatMessage && prisma.projectMemory) return next();
+  console.error("[studio-chat] CHAT_PRISMA_CLIENT_OUTDATED; prismaCode=client-model-missing");
+  return fail(
+    res,
+    503,
+    "Prisma Client 尚未更新，请运行 npm run prisma:generate 后重启服务。",
+    "CHAT_PRISMA_CLIENT_OUTDATED"
+  );
+});
 
 async function projectExists(projectId) {
   return prisma.project.findUnique({ where: { id: projectId }, select: { id: true } });
@@ -167,7 +178,7 @@ router.post("/stream", async (req, res, next) => {
       if (!chapter) return fail(res, 400, "章节不属于当前项目");
     }
     const provider = getProvider(session.provider);
-    if (!provider.apiKey) return fail(res, 400, missingKeyMessage());
+    if (!provider.apiKey) return fail(res, 400, missingKeyMessage(), "AI_API_KEY_MISSING");
     await prisma.chatMessage.create({ data: { sessionId, role: "user", content } });
     const stored = await prisma.chatMessage.findMany({ where: { sessionId }, orderBy: { createdAt: "asc" }, take: 40 });
     const assembled = await assembleMessages({ projectId, chapterId, selectedText: cleanText(req.body.selectedText, 5000), chapterContent: cleanText(req.body.chapterContent, 30000), history: stored });
@@ -195,4 +206,34 @@ router.post("/stream", async (req, res, next) => {
   }
 });
 
+function classifyInfrastructureError(error) {
+  const message = String(error && error.message || "");
+  if (/no such table|does not exist.*table|table .* does not exist/i.test(message)) {
+    return {
+      status: 503,
+      code: "CHAT_DB_SCHEMA_MISSING",
+      message: "聊天数据库尚未同步，请运行 npm run prisma:push 后重启服务。",
+    };
+  }
+  if (
+    /Unknown model|is not a function|Cannot read properties of undefined/i.test(message) &&
+    /chatSession|chatMessage|projectMemory/i.test(message)
+  ) {
+    return {
+      status: 503,
+      code: "CHAT_PRISMA_CLIENT_OUTDATED",
+      message: "Prisma Client 尚未更新，请运行 npm run prisma:generate 后重启服务。",
+    };
+  }
+  return null;
+}
+
+router.use((error, req, res, next) => {
+  const known = classifyInfrastructureError(error);
+  if (!known) return next(error);
+  console.error(`[studio-chat] ${known.code}; prismaCode=${error.code || "unknown"}`);
+  return fail(res, known.status, known.message, known.code);
+});
+
+router.classifyInfrastructureError = classifyInfrastructureError;
 module.exports = router;

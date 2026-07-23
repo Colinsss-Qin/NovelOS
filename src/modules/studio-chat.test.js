@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { prisma } = require("../lib/prisma");
 const { buildChapterContext } = require("../skills/context-skill/assembler");
+const studioChatRouter = require("./studio-chat-router");
 
 async function fixture() {
   const suffix = Date.now() + "-" + Math.random().toString(16).slice(2);
@@ -57,6 +58,21 @@ test("assistant text insertion requires confirmation and never auto-saves", () =
   const insertion = source.slice(source.indexOf("function insertText"), source.indexOf("function loadProjectData"));
   assert.match(insertion, /NovelOSModal\.confirm/);
   assert.doesNotMatch(insertion, /saveChapter/);
+});
+
+test("assistant retries initialization instead of silently dropping send", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "public/modules/studio-assistant/index.js"), "utf8");
+  const sendSource = source.slice(source.indexOf("function send()"), source.indexOf("function stop()"));
+  assert.match(sendSource, /AI 对话尚未初始化，正在重试/);
+  assert.match(sendSource, /loadProjectData\(\)\.then/);
+  assert.doesNotMatch(sendSource, /!state\.session \|\| state\.controller\) return/);
+});
+
+test("chat infrastructure errors identify missing schema and stale Prisma Client", () => {
+  const missingTable = studioChatRouter.classifyInfrastructureError(new Error("SQLite error: no such table: ChatSession"));
+  assert.equal(missingTable.code, "CHAT_DB_SCHEMA_MISSING");
+  const staleClient = studioChatRouter.classifyInfrastructureError(new Error("Cannot read properties of undefined (reading 'chatSession')"));
+  assert.equal(staleClient.code, "CHAT_PRISMA_CLIENT_OUTDATED");
 });
 
 test.after(async () => { await prisma.$disconnect(); });

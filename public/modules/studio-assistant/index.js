@@ -1,15 +1,41 @@
 var StudioAssistant = (function () {
   "use strict";
-  var state = { project: null, chapter: null, sessions: [], session: null, messages: [], memories: [], controller: null, selection: null, context: null };
+  var state = {
+    project: null, chapter: null, sessions: [], session: null, messages: [], memories: [],
+    controller: null, selection: null, context: null, initializing: false,
+    initError: null, actionError: null, initPromise: null, draft: "", projectVersion: 0
+  };
 
   function toast(text) { if (window.LayoutSkill) LayoutSkill.showToast(text); }
   function api(url, options) {
     return fetch(url, options).then(function (response) {
       return response.json().catch(function () { return {}; }).then(function (json) {
-        if (!response.ok || !json.success) throw new Error(json.error || "请求失败");
+        if (!response.ok || !json.success) {
+          var error = new Error(formatApiError(response.status, json));
+          error.status = response.status;
+          error.code = json.code || "";
+          throw error;
+        }
         return json.data;
       });
+    }).catch(function (error) {
+      if (error instanceof TypeError && !error.status) {
+        var networkError = new Error("无法连接 NovelOS 服务，请确认服务已启动并在更新代码后重启。");
+        networkError.code = "NETWORK_ERROR";
+        throw networkError;
+      }
+      throw error;
     });
+  }
+
+  function formatApiError(status, json) {
+    var code = json && json.code;
+    if (code === "CHAT_DB_SCHEMA_MISSING") return "聊天数据库尚未同步，请运行 npm run prisma:push 后重启服务。";
+    if (code === "CHAT_PRISMA_CLIENT_OUTDATED") return "Prisma Client 尚未更新，请运行 npm run prisma:generate 后重启服务。";
+    if (code === "AI_API_KEY_MISSING") return "当前 AI Provider 缺少 API Key，请在服务端 .env 配置后重启服务。";
+    if (status === 404) return "后端未找到 AI 对话接口，请确认代码已更新并重启 NovelOS 服务。";
+    if (status >= 500) return (json && json.error) || "AI 对话服务发生错误，请查看服务端日志。";
+    return (json && json.error) || "请求失败";
   }
   function el(tag, className, text) {
     var node = document.createElement(tag);
@@ -36,6 +62,8 @@ var StudioAssistant = (function () {
   function renderShell() {
     var root = document.getElementById("right-content");
     if (!root) return;
+    var previousInput = root.querySelector(".sa-input");
+    if (previousInput) state.draft = previousInput.value;
     root.textContent = "";
     root.className = "studio-assistant";
     var header = el("div", "sa-header");
@@ -46,6 +74,7 @@ var StudioAssistant = (function () {
     header.appendChild(controls);
     root.appendChild(header);
     root.appendChild(el("div", "sa-history hidden"));
+    renderPersistentStatus(root);
     root.appendChild(el("div", "sa-messages"));
     var context = el("div", "sa-context");
     context.appendChild(el("span", "sa-context-text", contextLabel()));
@@ -53,8 +82,10 @@ var StudioAssistant = (function () {
     root.appendChild(context);
     var composer = el("div", "sa-composer");
     var input = el("textarea", "sa-input");
-    input.placeholder = state.project ? "讨论剧情、人物、节奏或当前正文……" : "请先选择项目";
-    input.disabled = !state.project;
+    input.placeholder = state.initializing ? "AI 对话初始化中……" : (state.project ? "讨论剧情、人物、节奏或当前正文……" : "请先选择项目");
+    input.value = state.draft;
+    input.disabled = !canSend();
+    input.addEventListener("input", function () { state.draft = input.value; });
     input.addEventListener("keydown", function (event) {
       if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); }
     });
@@ -63,11 +94,26 @@ var StudioAssistant = (function () {
     var stop = button("停止", "sa-stop hidden", stop);
     stop.dataset.role = "stop";
     row.appendChild(stop);
-    row.appendChild(button("发送", "sa-send", send));
+    var sendButton = button(state.initializing ? "初始化中" : "发送", "sa-send", send);
+    sendButton.disabled = !canSend();
+    row.appendChild(sendButton);
     composer.appendChild(row);
     root.appendChild(composer);
     renderHistory();
     renderMessages();
+  }
+
+  function canSend() {
+    return !!(state.project && state.session && !state.initializing && !state.initError && !state.controller);
+  }
+
+  function renderPersistentStatus(root) {
+    var message = state.initError || state.actionError;
+    if (!state.initializing && !message) return;
+    var status = el("div", "sa-status " + (message ? "error" : "loading"));
+    status.appendChild(el("div", "sa-status-message", state.initializing ? "正在初始化 AI 对话……" : message));
+    if (message) status.appendChild(button("重试", "sa-small", retryInitialization));
+    root.appendChild(status);
   }
 
   function contextLabel() {
@@ -157,54 +203,118 @@ var StudioAssistant = (function () {
 
   function loadProjectData() {
     if (!state.project) return Promise.resolve();
+    if (state.initPromise) return state.initPromise;
+    var version = state.projectVersion;
+    var activeProjectId = state.project.id;
+    state.initializing = true;
+    state.initError = null;
+    state.actionError = null;
+    state.session = null;
+    renderShell();
     var projectId = encodeURIComponent(state.project.id);
-    return Promise.all([
+    state.initPromise = Promise.all([
       api("/api/chat/sessions?projectId=" + projectId),
       api("/api/chat/memories?projectId=" + projectId),
     ]).then(function (values) {
+      if (version !== state.projectVersion || !state.project || state.project.id !== activeProjectId) return;
       state.sessions = values[0]; state.memories = values[1];
       var lastId = localStorage.getItem("novelos.chat." + state.project.id);
       var target = state.sessions.find(function (s) { return s.id === lastId; }) || state.sessions[0];
+      if (target) return openSessionRequest(target.id);
+      return createSessionRequest();
+    }).then(function () {
+      if (version !== state.projectVersion) return;
+      if (!state.session) throw new Error("AI 对话尚未初始化，请重试。");
+      state.initializing = false;
+      state.initError = null;
       renderShell();
-      if (target) return openSession(target.id);
-      return newSession();
-    }).catch(function (error) { renderShell(); toast(error.message); });
+    }).catch(function (error) {
+      if (version !== state.projectVersion) return;
+      state.initializing = false;
+      state.session = null;
+      state.initError = error.message || "AI 对话初始化失败";
+      renderShell();
+    }).finally(function () {
+      if (version === state.projectVersion) state.initPromise = null;
+    });
+    return state.initPromise;
   }
 
   function newSession() {
-    if (!state.project) return;
+    if (!state.project || state.initializing) return;
+    state.initializing = true; state.initError = null; state.actionError = null;
+    renderShell();
+    return createSessionRequest().then(function () {
+      state.initializing = false; renderShell();
+    }).catch(function (error) {
+      state.initializing = false; state.initError = error.message; renderShell();
+    });
+  }
+
+  function openSession(id) {
+    if (!state.project || state.initializing) return;
+    state.initializing = true; state.initError = null; state.actionError = null;
+    renderShell();
+    return openSessionRequest(id).then(function () {
+      state.initializing = false; renderShell();
+    }).catch(function (error) {
+      state.initializing = false; state.initError = error.message; renderShell();
+    });
+  }
+
+  function createSessionRequest() {
     return api("/api/chat/sessions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: state.project.id, chapterId: state.chapter && state.chapter.id }) })
       .then(function (session) {
         state.sessions.unshift(session); state.session = session; state.messages = [];
         localStorage.setItem("novelos.chat." + state.project.id, session.id);
-        renderHistory(); renderMessages();
-      }).catch(function (error) { toast(error.message); });
+        return session;
+      });
   }
 
-  function openSession(id) {
-    if (!state.project) return;
+  function openSessionRequest(id) {
     return api("/api/chat/sessions/" + encodeURIComponent(id) + "?projectId=" + encodeURIComponent(state.project.id)).then(function (session) {
       state.session = session; state.messages = session.messages || [];
       localStorage.setItem("novelos.chat." + state.project.id, session.id);
-      renderHistory(); renderMessages();
-    }).catch(function (error) { toast(error.message); });
+      return session;
+    });
+  }
+
+  function retryInitialization() {
+    if (!state.project || state.initializing) return;
+    state.initError = null; state.actionError = null; state.initPromise = null;
+    loadProjectData();
   }
 
   function setSending(sending) {
     var input = document.querySelector(".sa-input");
     var sendButton = document.querySelector(".sa-send");
     var stopButton = document.querySelector('[data-role="stop"]');
-    if (input) input.disabled = sending;
-    if (sendButton) sendButton.disabled = sending;
+    if (input) input.disabled = sending || !canSend();
+    if (sendButton) sendButton.disabled = sending || !canSend();
     if (stopButton) stopButton.classList.toggle("hidden", !sending);
   }
 
   function send() {
     var input = document.querySelector(".sa-input");
     var content = input ? input.value.trim() : "";
-    if (!content || !state.project || !state.session || state.controller) return;
+    if (!content) return toast("请输入要发送的内容");
+    state.draft = input.value;
+    if (!state.project) {
+      state.actionError = "请先选择项目，再使用 AI 创作助手。";
+      renderShell();
+      return;
+    }
+    if (state.controller) return;
+    if (!state.session) {
+      state.actionError = "AI 对话尚未初始化，正在重试。";
+      renderShell();
+      return loadProjectData().then(function () {
+        if (state.session && state.draft.trim()) send();
+      });
+    }
     captureSelection();
-    var draft = input.value;
+    var draft = state.draft;
+    state.actionError = null;
     state.messages.push({ role: "user", content: content });
     state.messages.push({ role: "assistant", content: "" });
     renderMessages(); setSending(true);
@@ -214,8 +324,14 @@ var StudioAssistant = (function () {
       method: "POST", headers: { "Content-Type": "application/json" }, signal: state.controller.signal,
       body: JSON.stringify({ projectId: state.project.id, sessionId: state.session.id, chapterId: chapter && chapter.id, content: content, selectedText: state.selection && state.selection.text, chapterContent: editor() && editor().value }),
     }).then(function (response) {
-      if (!response.ok) return response.json().then(function (json) { throw new Error(json.error || "发送失败"); });
+      if (!response.ok) return response.json().catch(function () { return {}; }).then(function (json) {
+        var error = new Error(formatApiError(response.status, json));
+        error.status = response.status;
+        error.code = json.code || "";
+        throw error;
+      });
       input.value = "";
+      state.draft = "";
       var reader = response.body.getReader(), decoder = new TextDecoder(), buffer = "";
       function read() { return reader.read().then(function (chunk) {
         if (chunk.done) return;
@@ -235,10 +351,19 @@ var StudioAssistant = (function () {
     }).then(function () {
       return api("/api/chat/sessions?projectId=" + encodeURIComponent(state.project.id)).then(function (sessions) { state.sessions = sessions; renderHistory(); });
     }).catch(function (error) {
-      if (error.name !== "AbortError") { input.value = draft; toast(error.message || "发送失败，输入内容已保留"); }
+      if (error.name !== "AbortError") {
+        state.draft = draft;
+        input.value = draft;
+        state.actionError = error.message || "发送失败，输入内容已保留";
+        toast(state.actionError);
+      }
       if (!state.messages[state.messages.length - 1].content) state.messages.pop();
       renderMessages();
-    }).finally(function () { state.controller = null; setSending(false); });
+    }).finally(function () {
+      state.controller = null;
+      setSending(false);
+      if (state.actionError) renderShell();
+    });
   }
 
   function stop() { if (state.controller) state.controller.abort(); }
@@ -323,7 +448,13 @@ var StudioAssistant = (function () {
     }); list.appendChild(card);
   }
 
-  function onProjectChange(project) { state.project = project; state.chapter = null; state.session = null; state.messages = []; state.sessions = []; state.memories = []; renderShell(); loadProjectData(); }
+  function onProjectChange(project) {
+    state.projectVersion += 1;
+    state.project = project; state.chapter = null; state.session = null; state.messages = [];
+    state.sessions = []; state.memories = []; state.initPromise = null; state.initError = null;
+    state.actionError = null; state.initializing = false;
+    renderShell(); loadProjectData();
+  }
   function onChapterChange(chapter) { state.chapter = chapter; captureSelection(); renderShell(); }
   function init() {
     removeLegacyButtons();

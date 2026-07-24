@@ -6,7 +6,7 @@ class DeepSeekProvider extends OpenAICompatProvider {
     super({
       name: "deepseek",
       baseURL: "https://api.deepseek.com/v1",
-      model: "deepseek-chat",
+      model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
       apiKey: process.env.DEEPSEEK_API_KEY || "",
     });
   }

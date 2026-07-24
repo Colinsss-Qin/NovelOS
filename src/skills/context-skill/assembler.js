@@ -143,8 +143,8 @@ async function buildChapterContext(chapterId, projectId) {
   let volumeTitle = "（无卷）";
   let volumeSummary = "";
   if (chapter.volumeId) {
-    const volume = await prisma.volume.findUnique({
-      where: { id: chapter.volumeId },
+    const volume = await prisma.volume.findFirst({
+      where: { id: chapter.volumeId, projectId },
     });
     if (volume) {
       volumeTitle = volume.title;
@@ -154,7 +154,7 @@ async function buildChapterContext(chapterId, projectId) {
 
   // ── 第二层：从 Scene 聚合关联的人物/地点/势力 ──────────
   const scenes = await prisma.scene.findMany({
-    where: { chapterId: chapter.id },
+    where: { chapterId: chapter.id, projectId },
     orderBy: { order: "asc" },
   });
   const { characterIds, locationIds, factionIds } =
@@ -162,13 +162,13 @@ async function buildChapterContext(chapterId, projectId) {
 
   const [characters, locations, factions] = await Promise.all([
     characterIds.length
-      ? prisma.character.findMany({ where: { id: { in: characterIds } } })
+      ? prisma.character.findMany({ where: { id: { in: characterIds }, projectId } })
       : [],
     locationIds.length
-      ? prisma.location.findMany({ where: { id: { in: locationIds } } })
+      ? prisma.location.findMany({ where: { id: { in: locationIds }, projectId } })
       : [],
     factionIds.length
-      ? prisma.faction.findMany({ where: { id: { in: factionIds } } })
+      ? prisma.faction.findMany({ where: { id: { in: factionIds }, projectId } })
       : [],
   ]);
 
@@ -185,7 +185,7 @@ async function buildChapterContext(chapterId, projectId) {
 
   // ── 第五层：本章关联的未来场景 ─────────────────────────
   const futureScenes = await prisma.futureScene.findMany({
-    where: { expectedChapterId: chapter.id },
+    where: { expectedChapterId: chapter.id, projectId },
   });
 
   // ═══════════════════════════════════
@@ -282,15 +282,6 @@ async function buildChapterContext(chapterId, projectId) {
   }
 
   const contextBlock = lines.join("\n");
-
-  // [DEBUG] 上下文装配日志
-  console.log("══════════════════════════════════════");
-  console.log("[assembler] buildChapterContext 完成");
-  console.log("[assembler] contextBlock 长度:", contextBlock.length, "字符");
-  console.log("[assembler] usedItems:", JSON.stringify(usedItems, null, 2));
-  console.log("[assembler] contextBlock 预览 (前500字符):");
-  console.log(contextBlock.slice(0, 500));
-  console.log("══════════════════════════════════════");
 
   return { contextBlock, usedItems };
 }

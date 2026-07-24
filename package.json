@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "test": "node --test src/modules/studio-chat.test.js",
     "ensure:dist": "node scripts/ensure-dist.js",
     "dev": "npm run build && npm run ensure:dist && node server.js",
     "prestart": "npm run build && npm run ensure:dist",

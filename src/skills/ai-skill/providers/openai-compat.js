@@ -16,6 +16,10 @@ class OpenAICompatProvider {
    * Non-streaming generate.
    */
   async generate(opts) {
+    const messages = opts.messages || [
+      ...(opts.systemPrompt ? [{ role: "system", content: opts.systemPrompt }] : []),
+      { role: "user", content: opts.userPrompt || opts.prompt },
+    ];
     const res = await fetch(`${this.baseURL}/chat/completions`, {
       method: "POST",
       headers: {
@@ -24,10 +28,7 @@ class OpenAICompatProvider {
       },
       body: JSON.stringify({
         model: opts.model || this.model,
-        messages: [
-          ...(opts.systemPrompt ? [{ role: "system", content: opts.systemPrompt }] : []),
-          { role: "user", content: opts.userPrompt || opts.prompt },
-        ],
+        messages,
         temperature: opts.temperature ?? 0.7,
         max_tokens: opts.maxTokens ?? 4096,
         stream: false,
@@ -55,6 +56,10 @@ class OpenAICompatProvider {
    */
   async *generateStream(opts) {
     const startTime = Date.now();
+    const messages = opts.messages || [
+      ...(opts.systemPrompt ? [{ role: "system", content: opts.systemPrompt }] : []),
+      { role: "user", content: opts.userPrompt || opts.prompt },
+    ];
     const res = await fetch(`${this.baseURL}/chat/completions`, {
       method: "POST",
       headers: {
@@ -63,10 +68,7 @@ class OpenAICompatProvider {
       },
       body: JSON.stringify({
         model: opts.model || this.model,
-        messages: [
-          ...(opts.systemPrompt ? [{ role: "system", content: opts.systemPrompt }] : []),
-          { role: "user", content: opts.userPrompt || opts.prompt },
-        ],
+        messages,
         temperature: opts.temperature ?? 0.7,
         max_tokens: opts.maxTokens ?? 4096,
         stream: true,
